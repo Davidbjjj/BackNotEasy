@@ -18,6 +18,46 @@ import java.util.List;
 @Entity
 @Table(name = "listas")
 public class Lista {
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+
+    public void setTitulo(String titulo) {
+        this.titulo = titulo;
+    }
+
+    public String getTitulo() {
+        return titulo;
+    }
+
+    public Professor getProfessor() {
+        return professor;
+    }
+
+    public void setProfessor(Professor professor) {
+        this.professor = professor;
+    }
+
+    public List<Questao> getQuestoes() {
+        return questoes;
+    }
+
+    public void setQuestoes(List<Questao> questoes) {
+        this.questoes = questoes;
+    }
+
+    public List<Estudante> getEstudantes() {
+        return estudantes;
+    }
+
+    public void setEstudantes(List<Estudante> estudantes) {
+        this.estudantes = estudantes;
+    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -47,12 +87,11 @@ public class Lista {
     )
     private List<Estudante> estudantes;
 
-    // Construtor para inicializar a lista de estudantes
     public Lista(Long id, String titulo, Professor professor, List<Questao> questoes) {
         this.id = id;
         this.titulo = titulo;
         this.professor = professor;
         this.questoes = questoes;
-        this.estudantes = new ArrayList<>(); // Inicializando a lista manualmente
+        this.estudantes = new ArrayList<>();
     }
 }

@@ -1,7 +1,7 @@
 package com.example.BancoDeDados.Model;
 
-import java.sql.Date;
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -61,6 +61,62 @@ public class Estudante implements UserDetails {
     public Estudante(EstudanteLoginResponseDTO estudanteLoginResponseDTO) {
         this.email = estudanteLoginResponseDTO.email();
         this.senha = estudanteLoginResponseDTO.senha();
+    }
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public String getNome() {
+        return nome;
+    }
+
+    public void setNome(String nome) {
+        this.nome = nome;
+    }
+
+    public Date getDataNascimento() {
+        return dataNascimento;
+    }
+
+    public void setDataNascimento(Date dataNascimento) {
+        this.dataNascimento = dataNascimento;
+    }
+
+    public String getInstituicao() {
+        return instituicao;
+    }
+
+    public void setInstituicao(String instituicao) {
+        this.instituicao = instituicao;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getSenha() {
+        return senha;
+    }
+
+    public void setSenha(String senha) {
+        this.senha = senha;
+    }
+
+    public List<RespostaEstudantes> getRespostas() {
+        return respostas;
+    }
+
+    public void setRespostas(List<RespostaEstudantes> respostas) {
+        this.respostas = respostas;
     }
 
     @Override

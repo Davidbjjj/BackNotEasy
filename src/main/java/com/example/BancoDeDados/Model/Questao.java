@@ -37,6 +37,43 @@ public class Questao {
     private Integer id;
     @Column
     private String cabecalho;
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public String getCabecalho() {
+        return cabecalho;
+    }
+
+    public String getEnunciado() {
+        return enunciado;
+    }
+
+    public List<String> getAlternativas() {
+        return alternativas;
+    }
+
+    public Integer getGabarito() {
+        return gabarito;
+    }
+
+    public void setGabarito(Integer gabarito) {
+        this.gabarito = gabarito;
+    }
+
+    public List<RespostaEstudantes> getRespostasEstudantes() {
+        return respostasEstudantes;
+    }
+
+    public void setRespostasEstudantes(List<RespostaEstudantes> respostasEstudantes) {
+        this.respostasEstudantes = respostasEstudantes;
+    }
+
     @Column
     @Lob
     private String enunciado;
@@ -44,6 +81,10 @@ public class Questao {
     private List<String> alternativas;
     @Column
     private Integer gabarito;
+    @ManyToOne
+    @JoinColumn(name = "lista_id")
+    private Lista lista;
+
 
     @OneToMany(mappedBy = "questao", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RespostaEstudantes> respostasEstudantes;

@@ -5,10 +5,103 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="2de0229c-d23a-442f-8825-63864644b0d7" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/ResponseDTO/DesempenhoEstudanteDTO.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Repositores/ListaRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Repositores/ListaRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/BancoDeDadosApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/BancoDeDadosApplication.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Controller/DashboardController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Controller/DashboardController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Model/Estudante.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Model/Estudante.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Model/Lista.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Model/Lista.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Model/Professor.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Model/Professor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Model/Questao.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Model/Questao.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Model/RespostaEstudantes.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Model/RespostaEstudantes.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Repositores/QuestaoRepositores.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Repositores/QuestaoRepositores.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/ResponseDTO/EnviarRespostaDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/ResponseDTO/EnviarRespostaDTO.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Services/DashboardService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Services/DashboardService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/application.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Services/RespostaEstudantesService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Services/RespostaEstudantesService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/Arquivos/teste.pdf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/Arquivos/teste1.pdf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/application.properties" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/BancoDeDadosApplication.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Controller/ControllerEscola.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Controller/ControllerEscolaLogin.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Controller/ControllerEstudante.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Controller/ControllerEstudanteLogin.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Controller/ControllerIA.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Controller/ControllerLista.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Controller/ControllerPDF.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Controller/ControllerProfessor.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Controller/ControllerProfessorLogin.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Controller/ControllerQuestao.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Controller/ControllerUsuario.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Controller/DashboardController.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Controller/MateriaController.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Controller/RespostaEstudantesController.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Model/Escola.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Model/EscolaRole.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Model/Estudante.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Model/Lista.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Model/Materia.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Model/Professor.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Model/ProfessorRole.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Model/Questao.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Model/RespostaEstudantes.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Model/Usuario.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Repositores/EscolaRespositores.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Repositores/EstudanteRepositores.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Repositores/ListaRepository.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Repositores/MateriaRepositores.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Repositores/ProfessorRepositores.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Repositores/QuestaoRepositores.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Repositores/RespostaEstudantesRepository.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Repositores/UsuarioRepositores.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/ResponseDTO/DashboardDTO.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/ResponseDTO/ELoginRespondeDTO.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/ResponseDTO/EnviarRespostaDTO.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/ResponseDTO/EscLoginResponseDTO.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/ResponseDTO/EscolaLoginResponseDTO.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/ResponseDTO/EscolaResponseDTO.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/ResponseDTO/EstudanteLoginResponseDTO.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/ResponseDTO/EstudanteResponseDTO.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/ResponseDTO/ListaAddResponseDTO.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/ResponseDTO/ListaResponseDTO.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/ResponseDTO/MateriaResponseDTO.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/ResponseDTO/PLoginResponseDTO.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/ResponseDTO/ProfessorLoginResponseDTO.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/ResponseDTO/ProfessorResponseDTO.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/ResponseDTO/QuestaoResponseDTO.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/ResponseDTO/RespostaEstudanteDTO.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/ResponseDTO/UsuarioResponseDTO.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Security/Configurations.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Security/CorsConfig.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Security/SecurityFilter.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Security/TokenService.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Services/DashboardService.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Services/EmailService.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Services/IntegrarGabarito.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Services/LerGabarito.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Services/ListaService.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Services/RespostaEstudantesService.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Services/ServiceEscola.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Services/ServiceEstudante.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Services/ServiceIA.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Services/ServiceJson.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Services/ServiceJsonIA.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Services/ServiceLoginEscola.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Services/ServiceLoginEstudante.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Services/ServiceLoginProfessor.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Services/ServiceMateria.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Services/ServicePDF.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Services/ServicePDFIA.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Services/ServiceProfessor.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Services/ServiceQuestao.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Services/ServiceTratarRespostaIA.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Services/ServiceTratarTexto.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Services/ServiceTratarTextoIA.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Services/ServiceUsuario.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/Services/ValidarJson.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/config/SwaggerConfig.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/BancoDeDados/extencao/UserInvalid.class" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -33,7 +126,7 @@
   <component name="MavenImportPreferences">
     <option name="generalSettings">
       <MavenGeneralSettings>
-        <option name="mavenHome" value="Use Maven wrapper" />
+        <option name="mavenHomeTypeForPersistence" value="WRAPPER" />
       </MavenGeneralSettings>
     </option>
   </component>
@@ -49,28 +142,33 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "dart.analysis.tool.window.visible": "false",
-    "git-widget-placeholder": "deploy-0",
-    "last_opened_file_path": "C:/Users/David/Desktop/MIANSN/BancoDeQuestoes",
-    "project.structure.last.edited": "Project",
-    "project.structure.proportion": "0.0",
-    "project.structure.side.proportion": "0.0",
-    "settings.editor.selected.configurable": "editor.preferences.fonts.default",
-    "show.migrate.to.gradle.popup": "false"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Application.BancoDeDadosApplication.executor&quot;: &quot;Run&quot;,
+    &quot;Maven.BancoDeDados [clean,install].executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;dart.analysis.tool.window.visible&quot;: &quot;false&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/David/Desktop/BackEndEduca+/BancoDeQuestoes&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Project&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.0&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;editor.preferences.fonts.default&quot;,
+    &quot;show.migrate.to.gradle.popup&quot;: &quot;false&quot;
   }
-}]]></component>
+}</component>
   <component name="RunAnythingCache">
     <option name="myCommands">
       <command value="mvn clean install" />
     </option>
   </component>
   <component name="RunManager">
-    <configuration name="BancoDeDadosApplication" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+    <configuration name="BancoDeDadosApplication" type="Application" factoryName="Application" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="com.example.BancoDeDados.BancoDeDadosApplication" />
       <module name="BancoDeDados" />
       <extension name="coverage">
@@ -83,22 +181,12 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration default="true" type="JetRunConfigurationType">
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
     <configuration default="true" type="KotlinStandaloneScriptRunConfigurationType">
       <option name="filePath" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <recent_temporary>
-      <list>
-        <item itemvalue="Application.BancoDeDadosApplication" />
-      </list>
-    </recent_temporary>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">

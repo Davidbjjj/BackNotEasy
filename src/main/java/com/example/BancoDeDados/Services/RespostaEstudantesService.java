@@ -5,6 +5,7 @@ import com.example.BancoDeDados.Model.Questao;
 import com.example.BancoDeDados.Repositores.EstudanteRepositores;
 import com.example.BancoDeDados.Repositores.ListaRepository;
 import com.example.BancoDeDados.Repositores.QuestaoRepositores;
+import com.example.BancoDeDados.ResponseDTO.DesempenhoEstudanteDTO;
 import com.example.BancoDeDados.ResponseDTO.EnviarRespostaDTO;
 import com.example.BancoDeDados.ResponseDTO.RespostaEstudanteDTO;
 import com.example.BancoDeDados.Model.RespostaEstudantes;
@@ -12,6 +13,7 @@ import com.example.BancoDeDados.Repositores.RespostaEstudantesRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -19,30 +21,37 @@ import java.util.stream.Collectors;
 public class RespostaEstudantesService {
 
     @Autowired
-    RespostaEstudantesRepository respostaEstudantesRepository;
+    private RespostaEstudantesRepository respostaEstudantesRepository;
 
     @Autowired
-    ListaRepository listaRepository;
+    private ListaRepository listaRepository;
+
     @Autowired
-    QuestaoRepositores questaoRepository;
+    private QuestaoRepositores questaoRepository;
+
     @Autowired
-    EstudanteRepositores estudanteRepository;
+    private EstudanteRepositores estudanteRepository;
 
     public RespostaEstudantesService(
             RespostaEstudantesRepository respostaEstudantesRepository,
             QuestaoRepositores questaoRepository,
-            EstudanteRepositores estudanteRepository,ListaRepository listaRepository) {
+            EstudanteRepositores estudanteRepository,
+            ListaRepository listaRepository) {
         this.respostaEstudantesRepository = respostaEstudantesRepository;
         this.questaoRepository = questaoRepository;
         this.estudanteRepository = estudanteRepository;
         this.listaRepository = listaRepository;
-
     }
+
+    /**
+     * Salva a resposta do estudante para uma determinada questão.
+     */
     public void salvarResposta(EnviarRespostaDTO enviarRespostaDTO) {
         Questao questao = questaoRepository.findById(enviarRespostaDTO.getQuestaoId())
-                .orElseThrow(() -> new RuntimeException("Questão não encontrada."));
+                .orElseThrow(() -> new IllegalArgumentException("Questão não encontrada."));
+
         Estudante estudante = estudanteRepository.findById(enviarRespostaDTO.getEstudanteId())
-                .orElseThrow(() -> new RuntimeException("Estudante não encontrado."));
+                .orElseThrow(() -> new IllegalArgumentException("Estudante não encontrado."));
 
         RespostaEstudantes resposta = new RespostaEstudantes();
         resposta.setQuestao(questao);
@@ -51,13 +60,15 @@ public class RespostaEstudantesService {
 
         respostaEstudantesRepository.save(resposta);
     }
+
+    /**
+     * Retorna as questões associadas a uma lista específica para um determinado estudante.
+     */
     public List<Integer> buscarQuestoesPorListaEEstudante(Long listaId, Long estudanteId) {
-        // Validar se o estudante existe
-        if (!respostaEstudantesRepository.existsByEstudanteId(estudanteId)) {
+        if (!estudanteRepository.existsById(Math.toIntExact(estudanteId))) {
             throw new IllegalArgumentException("Estudante não encontrado.");
         }
 
-        // Obter as questões associadas à lista
         return listaRepository.findById(listaId)
                 .map(lista -> lista.getQuestoes().stream()
                         .map(Questao::getId)
@@ -65,10 +76,14 @@ public class RespostaEstudantesService {
                 .orElseThrow(() -> new IllegalArgumentException("Lista não encontrada."));
     }
 
+    /**
+     * Busca a resposta de um estudante para uma questão específica.
+     */
     public RespostaEstudanteDTO buscarRespostaPorQuestaoEEstudante(Long questaoId, Long estudanteId) {
         RespostaEstudantes resposta = respostaEstudantesRepository
                 .findByQuestaoIdAndEstudanteId(questaoId, estudanteId)
-                .orElseThrow(() -> new RuntimeException("Resposta não encontrada."));
+                .orElseThrow(() -> new IllegalArgumentException("Resposta não encontrada."));
+
         return new RespostaEstudanteDTO(
                 resposta.getId(),
                 resposta.getQuestao().getId(),
@@ -76,4 +91,36 @@ public class RespostaEstudantesService {
                 resposta.getResposta()
         );
     }
+    public List<DesempenhoEstudanteDTO> buscarDesempenhoPorLista(Long listaId) {
+        List<Questao> questoesDaLista = questaoRepository.findByLista_Id(listaId);
+
+        System.out.println("🔍 Questões encontradas para a lista " + listaId + ": " + questoesDaLista);
+
+        if (questoesDaLista.isEmpty()) {
+            System.out.println("⚠️ Nenhuma questão encontrada para a lista.");
+            return Collections.emptyList();
+        }
+
+        List<Integer> questoesIds = questoesDaLista.stream()
+                .map(Questao::getId)
+                .collect(Collectors.toList());
+
+        System.out.println("🆔 IDs das questões na lista: " + questoesIds);
+
+        List<DesempenhoEstudanteDTO> desempenho = respostaEstudantesRepository.findAll().stream()
+                .filter(resposta -> questoesIds.contains(resposta.getQuestao().getId()))
+                .map(resposta -> new DesempenhoEstudanteDTO(
+                        resposta.getEstudante().getId(),
+                        resposta.getQuestao().getId(),
+                        resposta.isCorreta()
+                ))
+                .collect(Collectors.toList());
+
+        System.out.println("📊 Desempenho calculado: " + desempenho);
+
+        return desempenho;
+    }
+
+
+
 }

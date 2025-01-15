@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.web.client.RestTemplate;
 
 @SpringBootApplication(exclude = {SecurityAutoConfiguration.class})
-class BancoDeDadosApplication {
+class  BancoDeDadosApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(BancoDeDadosApplication.class, args);

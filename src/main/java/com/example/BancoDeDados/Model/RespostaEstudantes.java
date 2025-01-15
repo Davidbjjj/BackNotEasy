@@ -1,9 +1,7 @@
 package com.example.BancoDeDados.Model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Data
 @NoArgsConstructor
@@ -20,9 +18,45 @@ public class RespostaEstudantes {
     private Questao questao;
 
     @Column(nullable = false)
-    private Boolean resposta; // true: Acertou | false: Errou
+    private Boolean resposta;
 
     @ManyToOne
     @JoinColumn(name = "estudante_id", nullable = false)
-    private Estudante estudante; // Associação com o estudante que respondeu
+    private Estudante estudante;
+
+    public boolean isCorreta() {
+        return resposta.equals(questao.getGabarito());
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Questao getQuestao() {
+        return questao;
+    }
+
+    public void setQuestao(Questao questao) {
+        this.questao = questao;
+    }
+
+    public Boolean getResposta() {
+        return resposta;
+    }
+
+    public void setResposta(Boolean resposta) {
+        this.resposta = resposta;
+    }
+
+    public Estudante getEstudante() {
+        return estudante;
+    }
+
+    public void setEstudante(Estudante estudante) {
+        this.estudante = estudante;
+    }
 }
