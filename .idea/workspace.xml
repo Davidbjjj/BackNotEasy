@@ -5,13 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="2de0229c-d23a-442f-8825-63864644b0d7" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Controller/ExtratorController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Services/ExtratorService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/Arquivos/por.traineddata" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/Arquivos/TesteComImagemNoPDF.pdf" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/Arquivos/teste.pdf" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/Arquivos/teste1.pdf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Services/ExtratorService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Services/ExtratorService.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -62,7 +58,7 @@
     "RunOnceActivity.git.unshallow": "true",
     "SHARE_PROJECT_CONFIGURATION_FILES": "true",
     "dart.analysis.tool.window.visible": "false",
-    "git-widget-placeholder": "Migraçao/Evento",
+    "git-widget-placeholder": "feature/OCR",
     "ignore.virus.scanning.warn.message": "true",
     "kotlin-language-version-configured": "true",
     "last_opened_file_path": "C:/Users/d.a.vieira.da.silva/Desktop/Migracao_Back/BancoDeQuestoes",
