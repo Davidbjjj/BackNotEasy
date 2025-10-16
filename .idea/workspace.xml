@@ -5,17 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="2de0229c-d23a-442f-8825-63864644b0d7" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Services/ExtratorService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Utils/TextoUtils.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/Arquivos/por.traineddata" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Controller/IAController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Controller/IAController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Repositores/ProfessorRepositores.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Repositores/ProfessorRepositores.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Security/SecurityFilter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Security/SecurityFilter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Services/IAService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Services/IAService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Services/JsonIAService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/BancoDeDados/Services/JsonIAService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/application.properties" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -119,10 +109,11 @@
   <component name="RunManager" selected="Application.BancoDeDadosApplication">
     <configuration name="BancoDeDadosApplication" type="Application" factoryName="Application" nameIsGenerated="true">
       <envs>
-        <env name="SPRING_DATASOURCE_DRIVER_CLASS_NAME" value="org.postgresql.Driver" />
-        <env name="SPRING_DATASOURCE_PASSWORD" value="yuYirdfO3s5TMILxGfwSFW2G9E8q5YTC" />
-        <env name="SPRING_DATASOURCE_URL" value="jdbc:postgresql://dpg-d3ntavjipnbc73auidj0-a.oregon-postgres.render.com:5432/noteasy_5gvp" />
-        <env name="SPRING_DATASOURCE_USERNAME" value="noteasy_5gvp_user" />
+        <env name="APIkey" value="AIzaSyAzEYDeLYJaAywBUbHZYwwTxRgVH7GDX18" />
+        <env name="SPRING_DATASOURCE_DRIVER_CLASS_NAME" value="org.postgresql.Driver;" />
+        <env name="SPRING_DATASOURCE_PASSWORD" value="j6nJzg8fIhhOLXxOnnm89ubca4t5KSjr;" />
+        <env name="SPRING_DATASOURCE_URL" value="jdbc:postgresql://dpg-d3oiaggdl3ps73c0jung-a.oregon-postgres.render.com:5432/noteasy_1ua7;" />
+        <env name="SPRING_DATASOURCE_USERNAME" value="noteasy_1ua7_user" />
       </envs>
       <option name="MAIN_CLASS_NAME" value="com.example.BancoDeDados.BancoDeDadosApplication" />
       <module name="BancoDeDados" />
