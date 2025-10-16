@@ -25,9 +25,6 @@ public class SecurityFilter extends OncePerRequestFilter {
     private TokenService tokenService;
 
     @Autowired
-    private ProfessorRepositores professorRepositores;
-
-    @Autowired
     private LoginProfessorService professorService;
 
     @Override
@@ -40,10 +37,9 @@ public class SecurityFilter extends OncePerRequestFilter {
             String subject = tokenService.validarToken(token);
 
             if (subject != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                Professor professor = professorRepositores.findByEmail(subject).orElseThrow(() -> new RuntimeException("Token invalid"));
 
-                var authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_PROFESSOR"));
-                var authentication = new UsernamePasswordAuthenticationToken(professor, null, authorities);
+                var authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_ADM"));
+                var authentication = new UsernamePasswordAuthenticationToken( null, authorities);
 
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
