@@ -2,11 +2,13 @@ package com.example.BancoDeDados.Services;
 
 import com.example.BancoDeDados.Model.Questao;
 import com.example.BancoDeDados.Repositores.QuestaoRepositores;
+import com.example.BancoDeDados.ResponseDTO.QuestaoDTO;
 import com.example.BancoDeDados.ResponseDTO.QuestaoResponseDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class QuestaoService {
@@ -53,8 +55,25 @@ public class QuestaoService {
         return questaoRepositores.findById(id).orElse(null);
     }
 
-    public List<Questao> listarQuestoes() {
-        return questaoRepositores.findAll();
+    public List<QuestaoDTO> listarQuestoes() {
+        List<Questao> questoes = questaoRepositores.findAll();
+        return questoes.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    private QuestaoDTO convertToDTO(Questao questao) {
+        QuestaoDTO dto = new QuestaoDTO();
+        dto.setId(questao.getId());
+        dto.setCabecalho(questao.getCabecalho());
+        dto.setEnunciado(questao.getEnunciado());
+        dto.setAlternativas(questao.getAlternativas());
+        dto.setGabarito(questao.getGabarito());
+        if (questao.getLista() != null) {
+            dto.setTituloLista(questao.getLista().getTitulo());
+        }
+
+        return dto;
     }
 
     public void deletarQuestao(Integer id) {

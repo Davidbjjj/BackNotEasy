@@ -1,6 +1,7 @@
 package com.example.BancoDeDados.Controller;
 
 import com.example.BancoDeDados.Model.Questao;
+import com.example.BancoDeDados.ResponseDTO.QuestaoDTO;
 import com.example.BancoDeDados.ResponseDTO.QuestaoResponseDTO;
 import com.example.BancoDeDados.Services.QuestaoService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +31,7 @@ public class QuestaoController {
     }
 
     @GetMapping("/questoes")
-    public List<Questao> listarQuestoes() {
+    public List<QuestaoDTO> listarQuestoes() {
         return questaoService.listarQuestoes();
     }
 
