@@ -39,10 +39,11 @@ public class IAController {
             File tempFile = File.createTempFile("ocr_", "_" + file.getOriginalFilename());
             file.transferTo(tempFile);
 
-            System.out.println("Recebido arquivo: " + file.getOriginalFilename()); // Log para verificar o arquivo recebido
+            System.out.println("Recebido arquivo: " + file.getOriginalFilename());
             String textoPDF = extratorService.extrair(tempFile.getAbsolutePath());
             System.out.println("Texto extraído: " + textoPDF); // Para debug
             String respostaserviceIA = IAService.enviarParaGemini(textoPDF);
+            System.out.println(IAService.getRespostaDoGemini());
             return ResponseEntity.ok("Questões salvas com sucesso!");
         } catch (IOException e) {
             return ResponseEntity.status(500).body("Erro ao extrair o texto do PDF: " + e.getMessage());
