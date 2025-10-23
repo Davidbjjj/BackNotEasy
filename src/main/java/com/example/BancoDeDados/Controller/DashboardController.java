@@ -1,13 +1,16 @@
 package com.example.BancoDeDados.Controller;
 
+import com.example.BancoDeDados.Model.NotaEvento;
 import com.example.BancoDeDados.ResponseDTO.DesempenhoEstudanteDTO;
 import com.example.BancoDeDados.Services.DashboardService;
+import com.example.BancoDeDados.Services.NotaService;
 import com.example.BancoDeDados.Services.RespostaEstudantesService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/dashboard")
@@ -16,6 +19,7 @@ public class DashboardController {
     @Autowired
     RespostaEstudantesService respostaEstudantesService;
 
+    private NotaService notaService;
     private final DashboardService dashboardService;
 
     public DashboardController(DashboardService dashboardService) {
@@ -36,5 +40,23 @@ public class DashboardController {
         List<DesempenhoEstudanteDTO> desempenho = respostaEstudantesService.buscarDesempenhoPorLista(listaId);
         return ResponseEntity.ok(desempenho);
     }
+
+    @GetMapping("/media-geral")
+    public Double mediaGeral() {
+        return notaService.calcularMediaGeral();
+    }
+
+    @GetMapping("/ranking-disciplinas")
+    public List<Map<String, Object>> ranking() {
+        return notaService.getRankingDisciplinas();
+    }
+
+
+    @GetMapping("/filtro-disciplina/{id}")
+    public List<Map<String, Object>> filtro(@PathVariable Long id) {
+        return notaService.getPorDisciplina(id);
+    }
+
+
 
 }
