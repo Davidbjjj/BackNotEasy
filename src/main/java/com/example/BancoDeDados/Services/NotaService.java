@@ -28,7 +28,7 @@ public class NotaService {
     public List<Map<String, Object>> getPorDisciplina(Long id) {
         List<Object[]> dados = notaRepository.filtrarPorDisciplina(id);
         return dados.stream()
-                .map(l -> Map.of("aluno", l[0], "nota", l[2]))
+                .map(l -> Map.of("aluno", l[0], "nota", l[1]))
                 .toList();
     }
 }
