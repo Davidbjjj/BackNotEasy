@@ -65,7 +65,7 @@ public class RespostaEstudantesService {
     /**
      * Retorna as questões associadas a uma lista específica para um determinado estudante.
      */
-    public List<Integer> buscarQuestoesPorListaEEstudante(Long listaId, UUID estudanteId) {
+    public List<Integer> buscarQuestoesPorListaEEstudante(UUID listaId, UUID estudanteId) {
         if (!estudanteRepository.existsById((estudanteId))) {
             throw new IllegalArgumentException("Estudante não encontrado.");
         }
@@ -80,7 +80,7 @@ public class RespostaEstudantesService {
     /**
      * Busca a resposta de um estudante para uma questão específica.
      */
-    public RespostaEstudanteDTO buscarRespostaPorQuestaoEEstudante(Long questaoId, UUID estudanteId) {
+    public RespostaEstudanteDTO buscarRespostaPorQuestaoEEstudante(Integer questaoId, UUID estudanteId) {
         RespostaEstudantes resposta = respostaEstudantesRepository
                 .findByQuestaoIdAndEstudanteId(questaoId, estudanteId)
                 .orElseThrow(() -> new IllegalArgumentException("Resposta não encontrada."));
@@ -92,7 +92,7 @@ public class RespostaEstudantesService {
                 resposta.getResposta()
         );
     }
-    public List<DesempenhoEstudanteDTO> buscarDesempenhoPorLista(Long listaId) {
+    public List<DesempenhoEstudanteDTO> buscarDesempenhoPorLista(UUID listaId) {
         List<Questao> questoesDaLista = questaoRepository.findByLista_Id(listaId);
 
         System.out.println("🔍 Questões encontradas para a lista " + listaId + ": " + questoesDaLista);

@@ -5,15 +5,14 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
-
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
-public class QuestaoResponseDTO {
-    private Integer id;
+@AllArgsConstructor
+public class QuestaoRequestDTO {
     private String cabecalho;
     private String enunciado;
     private List<String> alternativas;
     private Integer gabarito;
+
 
 }

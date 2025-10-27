@@ -6,6 +6,7 @@ import com.example.BancoDeDados.Model.Role;
 import com.example.BancoDeDados.Repositores.AccountRepository;
 import com.example.BancoDeDados.Repositores.ProfessorRepositores;
 import com.example.BancoDeDados.ResponseDTO.PLoginResponseDTO;
+import com.example.BancoDeDados.ResponseDTO.ProfessorDTO;
 import com.example.BancoDeDados.ResponseDTO.ProfessorResponseDTO;
 import com.example.BancoDeDados.Security.TokenService;
 import com.example.BancoDeDados.Services.EmailService;
@@ -97,8 +98,9 @@ public class ProfessorController {
 
     @CrossOrigin(originPatterns = "*", allowedHeaders = "*")
     @GetMapping("/listar")
-    public List<Professor> listarProfessores() {
-        return professorService.listar();
+    public ResponseEntity<List<ProfessorDTO>> listarProfessores() {
+        List<ProfessorDTO> professores = professorService.listar();
+        return ResponseEntity.ok(professores);
     }
 
     @CrossOrigin(originPatterns = "*", allowedHeaders = "*")

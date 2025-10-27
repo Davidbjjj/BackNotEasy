@@ -9,7 +9,7 @@ import java.util.UUID;
 
 @Repository
 public interface RespostaEstudantesRepository extends JpaRepository<RespostaEstudantes, Long> {
-    Optional<RespostaEstudantes> findByQuestaoIdAndEstudanteId(Long questaoId, UUID estudanteId);
+    Optional<RespostaEstudantes> findByQuestaoIdAndEstudanteId(Integer questaoId, UUID estudanteId);
 
     boolean existsByEstudanteId(UUID estudanteId);
 }

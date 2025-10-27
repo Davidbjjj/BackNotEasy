@@ -10,7 +10,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
+import java.util.UUID;
+
 import java.util.Map;
+
 
 @RestController
 @RequestMapping("/api/dashboard")
@@ -27,7 +31,7 @@ public class DashboardController {
     }
 
     @GetMapping("/lista/{listaId}")
-    public ResponseEntity<?> getDashboardByLista(@PathVariable Long listaId) {
+    public ResponseEntity<?> getDashboardByLista(@PathVariable UUID listaId) {
         try {
             var dashboard = dashboardService.getDashboardByListaId(listaId);
             return ResponseEntity.ok(dashboard);
@@ -36,7 +40,7 @@ public class DashboardController {
         }
     }
     @GetMapping("/desempenho/lista/{listaId}")
-    public ResponseEntity<List<DesempenhoEstudanteDTO>> getDesempenhoPorLista(@PathVariable Long listaId) {
+    public ResponseEntity<List<DesempenhoEstudanteDTO>> getDesempenhoPorLista(@PathVariable UUID listaId) {
         List<DesempenhoEstudanteDTO> desempenho = respostaEstudantesService.buscarDesempenhoPorLista(listaId);
         return ResponseEntity.ok(desempenho);
     }

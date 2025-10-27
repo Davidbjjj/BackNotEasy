@@ -24,7 +24,7 @@ public class EscolaService {
         }
     }
 
-    public List<Escola> listar(Escola escola) {
+    public List<Escola> listar() {
         return escolaRepositores.findAll();
     }
 

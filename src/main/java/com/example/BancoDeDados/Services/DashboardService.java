@@ -26,7 +26,7 @@ public class DashboardService {
         this.notaEventoRepository = notaEventoRepository;
     }
 
-    public Map<String, Object> getDashboardByListaId(Long listaId) {
+    public Map<String, Object> getDashboardByListaId(UUID listaId) {
         Lista lista = listaRepository.findById(listaId)
                 .orElseThrow(() -> new RuntimeException("Lista não encontrada"));
 
