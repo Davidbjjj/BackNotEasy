@@ -8,15 +8,21 @@ import com.example.BancoDeDados.Repositores.EstudanteRepositores;
 import com.example.BancoDeDados.Repositores.ListaRepository;
 import com.example.BancoDeDados.Repositores.ProfessorRepositores;
 import com.example.BancoDeDados.Repositores.QuestaoRepositores;
+import com.example.BancoDeDados.ResponseDTO.ListaCompletaResponseDTO;
 import com.example.BancoDeDados.ResponseDTO.ListaResponseDTO;
 import com.example.BancoDeDados.ResponseDTO.QuestaoResponseDTO;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static java.util.stream.Collectors.toList;
+
 @Service
+@Transactional
 public class ListaService {
 
     @Autowired
@@ -31,12 +37,18 @@ public class ListaService {
     @Autowired
     private ProfessorRepositores professorRepository;
 
-    public ListaResponseDTO adicionarQuestao(Integer listaId, Integer questaoId) {
-        Lista lista = listaRepository.findById(Long.valueOf(listaId))
+    // Métodos para Questões
+    public ListaResponseDTO adicionarQuestao(UUID listaId, Integer questaoId) {
+        Lista lista = listaRepository.findById(listaId)
                 .orElseThrow(() -> new RuntimeException("Lista não encontrada"));
 
         Questao questao = questaoRepository.findById(questaoId)
                 .orElseThrow(() -> new RuntimeException("Questão não encontrada"));
+
+        // Verifica se a questão já está na lista
+        if (lista.getQuestoes().contains(questao)) {
+            throw new RuntimeException("Questão já está na lista");
+        }
 
         lista.getQuestoes().add(questao);
         Lista updatedLista = listaRepository.save(lista);
@@ -44,23 +56,86 @@ public class ListaService {
         return convertToDTO(updatedLista);
     }
 
-    public ListaResponseDTO adicionarQuestoes(Integer listaId, List<Integer> questaoIds) {
-        Lista lista = listaRepository.findById(Long.valueOf(listaId))
+    @Transactional
+    public ListaResponseDTO adicionarQuestaoExistente(UUID listaId, Integer questaoId) {
+        // Use o método com JOIN FETCH para carregar as questões de uma vez
+        Lista lista = listaRepository.findByIdWithQuestoes(listaId)
                 .orElseThrow(() -> new RuntimeException("Lista não encontrada"));
 
-        for (Integer questaoId : questaoIds) {
-            Questao questao = questaoRepository.findById(questaoId)
-                    .orElseThrow(() -> new RuntimeException("Questão não encontrada"));
-            lista.getQuestoes().add(questao);
+        Questao questao = questaoRepository.findById(questaoId)
+                .orElseThrow(() -> new RuntimeException("Questão não encontrada"));
+
+        // Verifica se a questão já está na lista
+        if (lista.getQuestoes().contains(questao)) {
+            throw new RuntimeException("Questão já está na lista");
         }
 
-        Lista updatedLista = listaRepository.save(lista);
+        // Adiciona a questão à lista
+        lista.getQuestoes().add(questao);
+        listaRepository.save(lista);
 
-        return convertToDTO(updatedLista);
+        return new ListaResponseDTO(lista.getId(), lista.getTitulo(), lista.getProfessor().getNome());
     }
 
-    public List<QuestaoResponseDTO> buscarQuestoesPorLista(Integer listaId) {
-        Lista lista = listaRepository.findById(Long.valueOf(listaId))
+    public ListaCompletaResponseDTO adicionarQuestaoExistenteCompleto(UUID listaId, Integer questaoId) {
+        Lista lista = listaRepository.findById(listaId)
+                .orElseThrow(() -> new RuntimeException("Lista não encontrada"));
+
+        Questao questao = questaoRepository.findById(questaoId)
+                .orElseThrow(() -> new RuntimeException("Questão não encontrada"));
+
+        // Verifica se a questão já está na lista
+        if (lista.getQuestoes().contains(questao)) {
+            throw new RuntimeException("Questão já está na lista");
+        }
+
+        // Adiciona a questão à lista
+        lista.getQuestoes().add(questao);
+        listaRepository.save(lista);
+
+        // Converte as questões para DTO
+        List<QuestaoResponseDTO> questaoDTOs = lista.getQuestoes().stream()
+                .map(q -> new QuestaoResponseDTO(
+                        q.getId(),
+                        q.getCabecalho(),
+                        q.getEnunciado(),
+                        q.getAlternativas(),
+                        q.getGabarito()))
+                .collect(toList());
+
+        return new ListaCompletaResponseDTO(
+                lista.getId(),
+                lista.getTitulo(),
+                lista.getProfessor().getNome(),
+                questaoDTOs
+        );
+    }
+
+    public ListaResponseDTO adicionarQuestoesEmLote(UUID listaId, List<Integer> questaoIds) {
+        Lista lista = listaRepository.findById(listaId)
+                .orElseThrow(() -> new RuntimeException("Lista não encontrada"));
+
+        List<Questao> questões = questaoRepository.findAllById(questaoIds);
+
+        // Verifica se todas as questões foram encontradas
+        if (questões.size() != questaoIds.size()) {
+            throw new RuntimeException("Uma ou mais questões não foram encontradas");
+        }
+
+        // Adiciona as questões à lista (evitando duplicatas)
+        for (Questao questao : questões) {
+            if (!lista.getQuestoes().contains(questao)) {
+                lista.getQuestoes().add(questao);
+            }
+        }
+
+        listaRepository.save(lista);
+
+        return new ListaResponseDTO(lista.getId(), lista.getTitulo(), lista.getProfessor().getNome());
+    }
+
+    public List<QuestaoResponseDTO> buscarQuestoesPorLista(UUID listaId) {
+        Lista lista = listaRepository.findById(listaId)
                 .orElseThrow(() -> new RuntimeException("Lista não encontrada"));
 
         return lista.getQuestoes().stream()
@@ -71,24 +146,24 @@ public class ListaService {
                         questao.getAlternativas(),
                         questao.getGabarito()
                 ))
-                .collect(Collectors.toList());
+                .collect(toList());
     }
 
-    public ListaResponseDTO removerQuestao(Integer listaId, Integer questaoId) {
-        Lista lista = listaRepository.findById(Long.valueOf(listaId))
+    public ListaResponseDTO removerQuestao(UUID listaId, Integer questaoId) {
+        Lista lista = listaRepository.findById(listaId)
                 .orElseThrow(() -> new RuntimeException("Lista não encontrada"));
 
-        Questao questao = lista.getQuestoes().stream()
-                .filter(q -> q.getId().equals(questaoId))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("Questão não encontrada na lista"));
+        Questao questao = questaoRepository.findById(questaoId)
+                .orElseThrow(() -> new RuntimeException("Questão não encontrada"));
 
+        // Remove a questão da lista
         lista.getQuestoes().remove(questao);
-        Lista updatedLista = listaRepository.save(lista);
+        listaRepository.save(lista);
 
-        return convertToDTO(updatedLista);
+        return new ListaResponseDTO(lista.getId(), lista.getTitulo(), lista.getProfessor().getNome());
     }
 
+    // Métodos para Listas
     public ListaResponseDTO criarLista(String titulo, UUID professorId) {
         Professor professor = professorRepository.findById(professorId)
                 .orElseThrow(() -> new RuntimeException("Professor não encontrado"));
@@ -100,60 +175,96 @@ public class ListaService {
         return convertToDTO(listaRepository.save(lista));
     }
 
-    public ListaResponseDTO editarLista(Integer listaId, String novoTitulo) {
-        Lista lista = listaRepository.findById(Long.valueOf(listaId))
+    public ListaResponseDTO editarLista(UUID listaId, String novoTitulo) {
+        Lista lista = listaRepository.findById(listaId)
                 .orElseThrow(() -> new RuntimeException("Lista não encontrada"));
 
         lista.setTitulo(novoTitulo);
         return convertToDTO(listaRepository.save(lista));
     }
 
-    public void excluirLista(Integer listaId) {
-        if (!listaRepository.existsById(Long.valueOf(listaId))) {
+    public void excluirLista(UUID listaId) {
+        if (!listaRepository.existsById(listaId)) {
             throw new RuntimeException("Lista não encontrada");
         }
-        listaRepository.deleteById(Long.valueOf(listaId));
+        listaRepository.deleteById(listaId);
+    }
+
+    public List<ListaResponseDTO> buscarTodasListas() {
+        List<Lista> listas = listaRepository.findAll();
+        return listas.stream()
+                .map(this::convertToDTO)
+                .collect(toList());
     }
 
     public List<ListaResponseDTO> buscarListasPorProfessor(UUID professorId) {
         List<Lista> listas = listaRepository.findByProfessorId(professorId);
         return listas.stream()
                 .map(this::convertToDTO)
-                .collect(Collectors.toList());
+                .collect(toList());
     }
 
-
-
-    private ListaResponseDTO convertToDTO(Lista lista) {
-        return new ListaResponseDTO(
-                lista.getId().intValue(),
-                lista.getTitulo(),
-                lista.getProfessor().getNome()
-        );
-    }
-    public ListaResponseDTO adicionarEstudante(Long listaId, UUID estudanteId) {
+    // Métodos para Estudantes
+    public ListaResponseDTO adicionarEstudante(UUID listaId, UUID estudanteId) {
         Lista lista = listaRepository.findById(listaId)
                 .orElseThrow(() -> new RuntimeException("Lista não encontrada"));
 
         Estudante estudante = estudanteRepositores.findById(estudanteId)
                 .orElseThrow(() -> new RuntimeException("Estudante não encontrado"));
+
+        // Verifica se o estudante já está na lista
+        if (lista.getEstudantes().contains(estudante)) {
+            throw new RuntimeException("Estudante já está na lista");
+        }
 
         lista.getEstudantes().add(estudante);
         listaRepository.save(lista);
 
-        return new ListaResponseDTO(lista.getId(), lista.getTitulo(), lista.getProfessor(), lista.getQuestoes(), lista.getEstudantes());
+        return new ListaResponseDTO(lista.getId(), lista.getTitulo(), lista.getProfessor().getNome());
     }
 
-    public ListaResponseDTO removerEstudante(Long listaId, UUID estudanteId) {
+    public ListaResponseDTO removerEstudante(UUID listaId, UUID estudanteId) {
         Lista lista = listaRepository.findById(listaId)
                 .orElseThrow(() -> new RuntimeException("Lista não encontrada"));
 
         Estudante estudante = estudanteRepositores.findById(estudanteId)
                 .orElseThrow(() -> new RuntimeException("Estudante não encontrado"));
 
+        // Remove o estudante da lista
         lista.getEstudantes().remove(estudante);
         listaRepository.save(lista);
 
-        return new ListaResponseDTO(lista.getId(), lista.getTitulo(), lista.getProfessor(), lista.getQuestoes(), lista.getEstudantes());
+        return new ListaResponseDTO(lista.getId(), lista.getTitulo(), lista.getProfessor().getNome());
+    }
+
+    public ListaCompletaResponseDTO buscarListaCompleta(UUID listaId) {
+        Lista lista = listaRepository.findById(listaId)
+                .orElseThrow(() -> new RuntimeException("Lista não encontrada"));
+
+        // Converte as questões para DTO
+        List<QuestaoResponseDTO> questaoDTOs = lista.getQuestoes().stream()
+                .map(q -> new QuestaoResponseDTO(
+                        q.getId(),
+                        q.getCabecalho(),
+                        q.getEnunciado(),
+                        q.getAlternativas(),
+                        q.getGabarito()))
+                .collect(toList());
+
+        return new ListaCompletaResponseDTO(
+                lista.getId(),
+                lista.getTitulo(),
+                lista.getProfessor().getNome(),
+                questaoDTOs
+        );
+    }
+
+    // Método auxiliar
+    private ListaResponseDTO convertToDTO(Lista lista) {
+        return new ListaResponseDTO(
+                lista.getId(),
+                lista.getTitulo(),
+                lista.getProfessor().getNome()
+        );
     }
 }

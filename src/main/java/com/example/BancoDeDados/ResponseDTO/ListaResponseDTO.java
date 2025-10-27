@@ -5,15 +5,17 @@ import com.example.BancoDeDados.Model.Professor;
 import com.example.BancoDeDados.Model.Questao;
 
 import java.util.List;
+import java.util.UUID;
+
 
 public record ListaResponseDTO(
-        Integer id,
+        UUID id,
         String titulo,
-        String professorNome
+        String professor
 ) {
-    public ListaResponseDTO(Long id, String titulo, Professor professor, List<Questao> questoes, List<Estudante> estudantes) {
+    public ListaResponseDTO(UUID id, String titulo, Professor professor, List<Questao> questoes, List<Estudante> estudantes) {
         this(
-                id != null ? id.intValue() : null,
+                id ,
                 titulo,
                 professor != null ? professor.getNome() : null
         );

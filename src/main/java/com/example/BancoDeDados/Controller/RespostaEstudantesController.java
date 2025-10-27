@@ -20,7 +20,7 @@ public class RespostaEstudantesController {
 
     @GetMapping("/respostas/buscar")
     public RespostaEstudanteDTO buscarRespostaPorQuestaoEEstudante(
-            @RequestParam Long questaoId,
+            @RequestParam Integer questaoId,
             @RequestParam UUID estudanteId) {
         return respostaEstudantesService.buscarRespostaPorQuestaoEEstudante(questaoId, estudanteId);
     }
@@ -31,7 +31,7 @@ public class RespostaEstudantesController {
     }
     @GetMapping("/respostas/lista-questoes")
     public ResponseEntity<List<Integer>> buscarQuestoesPorListaEEstudante(
-            @RequestParam Long listaId,
+            @RequestParam UUID listaId,
             @RequestParam UUID estudanteId) {
         List<Integer> questoes = respostaEstudantesService.buscarQuestoesPorListaEEstudante(listaId, estudanteId);
         return ResponseEntity.ok(questoes);

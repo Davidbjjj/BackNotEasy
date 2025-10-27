@@ -21,6 +21,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -81,8 +82,10 @@ public class EscolaController {
 
     @CrossOrigin(originPatterns = "*", allowedHeaders = "*")
     @GetMapping("/listar")
-    public String listar(Model model, Escola escola) {
-        return model.addAttribute("escola", this.escolaService.listar(escola)).toString();
+    @ResponseBody
+    public ResponseEntity<List<Escola>> listar() {
+        List<Escola> escolas = escolaService.listar();
+        return ResponseEntity.ok(escolas);
     }
 
     @CrossOrigin(originPatterns = "*", allowedHeaders = "*")

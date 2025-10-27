@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Data
 @AllArgsConstructor
@@ -18,50 +19,9 @@ import java.util.List;
 @Entity
 @Table(name = "listas")
 public class Lista {
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-
-    public void setTitulo(String titulo) {
-        this.titulo = titulo;
-    }
-
-    public String getTitulo() {
-        return titulo;
-    }
-
-    public Professor getProfessor() {
-        return professor;
-    }
-
-    public void setProfessor(Professor professor) {
-        this.professor = professor;
-    }
-
-    public List<Questao> getQuestoes() {
-        return questoes;
-    }
-
-    public void setQuestoes(List<Questao> questoes) {
-        this.questoes = questoes;
-    }
-
-    public List<Estudante> getEstudantes() {
-        return estudantes;
-    }
-
-    public void setEstudantes(List<Estudante> estudantes) {
-        this.estudantes = estudantes;
-    }
-
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private UUID id;
 
     @Column(nullable = false)
     private String titulo;
@@ -87,11 +47,4 @@ public class Lista {
     )
     private List<Estudante> estudantes;
 
-    public Lista(Long id, String titulo, Professor professor, List<Questao> questoes) {
-        this.id = id;
-        this.titulo = titulo;
-        this.professor = professor;
-        this.questoes = questoes;
-        this.estudantes = new ArrayList<>();
-    }
 }

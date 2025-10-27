@@ -2,6 +2,7 @@ package com.example.BancoDeDados.Model;
 
 import com.example.BancoDeDados.ResponseDTO.ProfessorLoginResponseDTO;
 import com.example.BancoDeDados.ResponseDTO.ProfessorResponseDTO;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -167,6 +168,7 @@ public class Professor implements UserDetails {
         return true;
     }
 
+    @JsonIgnore
     public Object getEscola() {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getEscola'");

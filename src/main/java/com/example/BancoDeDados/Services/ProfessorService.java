@@ -3,6 +3,7 @@ package com.example.BancoDeDados.Services;
 import com.example.BancoDeDados.Model.Professor;
 import com.example.BancoDeDados.Repositores.ProfessorRepositores;
 
+import com.example.BancoDeDados.ResponseDTO.ProfessorDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -10,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class ProfessorService {
@@ -30,8 +32,11 @@ public class ProfessorService {
         return professorRepositores.save(professor);
     }
 
-    public List<Professor> listar() {
-        return professorRepositores.findAll();
+    public List<ProfessorDTO> listar() {
+        List<Professor> professores = professorRepositores.findAll();
+        return professores.stream()
+                .map(ProfessorDTO::new)
+                .collect(Collectors.toList());
     }
 
     public boolean deletar(UUID id) {
