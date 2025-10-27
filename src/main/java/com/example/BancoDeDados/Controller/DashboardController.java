@@ -41,6 +41,23 @@ public class DashboardController {
         return ResponseEntity.ok(desempenho);
     }
 
+
+    @GetMapping("/desempenho/periodo")
+    public ResponseEntity<?> getDesempenhoPorPeriodoEMateria(
+            @RequestParam("startDate") String startDateStr,
+            @RequestParam("endDate") String endDateStr,
+            @RequestParam(value = "materiaId", required = false) java.util.UUID materiaId
+    ) {
+        try {
+            java.time.LocalDateTime startDate = java.time.LocalDateTime.parse(startDateStr);
+            java.time.LocalDateTime endDate = java.time.LocalDateTime.parse(endDateStr);
+            var resultado = dashboardService.getDesempenhoGeralPorPeriodo(startDate, endDate, materiaId);
+            return ResponseEntity.ok(resultado);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Erro: " + e.getMessage());
+        }
+    }
+  
     @GetMapping("/media-geral")
     public Double mediaGeral() {
         return notaService.calcularMediaGeral();
@@ -56,6 +73,7 @@ public class DashboardController {
     public List<Map<String, Object>> filtro(@PathVariable Long id) {
         return notaService.getPorDisciplina(id);
     }
+
 
 
 
