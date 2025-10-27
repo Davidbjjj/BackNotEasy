@@ -1,23 +1,29 @@
 package com.example.BancoDeDados.Services;
 
 import com.example.BancoDeDados.Model.Lista;
-import com.example.BancoDeDados.Model.Questao;
-import com.example.BancoDeDados.Model.RespostaEstudantes;
+import com.example.BancoDeDados.Model.NotaEvento;
 import com.example.BancoDeDados.Repositores.ListaRepository;
+import com.example.BancoDeDados.Repositores.NotaEventoRepository;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.UUID;
 
 @Service
 public class DashboardService {
 
     private final ListaRepository listaRepository;
 
+    private final NotaEventoRepository notaEventoRepository;
+
     @Autowired
-    public DashboardService(ListaRepository listaRepository) {
+    public DashboardService(ListaRepository listaRepository, NotaEventoRepository notaEventoRepository) {
         this.listaRepository = listaRepository;
+        this.notaEventoRepository = notaEventoRepository;
     }
 
     public Map<String, Object> getDashboardByListaId(UUID listaId) {
@@ -51,4 +57,58 @@ public class DashboardService {
         dashboard.put("questoes", questoesData);
         return dashboard;
     }
+
+    public Map<String, Object> getDashboardByProfessorId(UUID professorId) {
+        List<Lista> listas = listaRepository.findByProfessorId(professorId);
+
+        Map<String, Object> dashboard = new HashMap<>();
+        dashboard.put("listas", listas.stream().map(lista -> {
+            Map<String, Object> listaInfo = new HashMap<>();
+            listaInfo.put("id", lista.getId());
+            listaInfo.put("titulo", lista.getTitulo());
+            listaInfo.put("professor", lista.getProfessor().getNome());
+            listaInfo.put("questoes", lista.getQuestoes().size());
+            listaInfo.put("estudantes", lista.getEstudantes().size());
+            return listaInfo;
+        }).collect(Collectors.toList()));
+
+        return dashboard;
+    }
+
+    public Map<String, Object> getDesempenhoGeralPorPeriodo(LocalDateTime startDate,
+                                LocalDateTime endDate,
+                                UUID materiaId) {
+    List<NotaEvento> notas = notaEventoRepository.findByPeriodoAndMateria(startDate, endDate, materiaId);
+
+    int totalAvaliacoes = notas.size();
+    long alunosAvaliados = notas.stream()
+        .filter(n -> n.getEstudante() != null)
+        .map(n -> n.getEstudante().getId())
+        .distinct()
+        .count();
+
+    double mediaNotas = notas.stream()
+        .map(NotaEvento::getNota)
+        .filter(Objects::nonNull)
+        .mapToDouble(Double::doubleValue)
+        .average()
+        .orElse(0.0);
+
+    double mediaPercentual = notas.stream()
+        .filter(n -> n.getNota() != null && n.getEvento() != null && n.getEvento().getNotaMaxima() != null && n.getEvento().getNotaMaxima() > 0)
+        .mapToDouble(n -> (n.getNota() / n.getEvento().getNotaMaxima()) * 100.0)
+        .average()
+        .orElse(0.0);
+
+    Map<String, Object> dashboard = new HashMap<>();
+    dashboard.put("inicio", startDate);
+    dashboard.put("fim", endDate);
+    dashboard.put("materiaId", materiaId);
+    dashboard.put("totalAvaliacoes", totalAvaliacoes);
+    dashboard.put("alunosAvaliados", alunosAvaliados);
+    dashboard.put("mediaNotas", mediaNotas);
+    dashboard.put("mediaPercentual", mediaPercentual);
+    return dashboard;
+    }
+    
 }
