@@ -3,10 +3,7 @@ package com.example.BancoDeDados.Services;
 import com.example.BancoDeDados.Exceptions.ResourceNotFoundException;
 import com.example.BancoDeDados.Mapper.EventoMapper;
 import com.example.BancoDeDados.Model.*;
-import com.example.BancoDeDados.Repositores.EstudanteRepositores;
-import com.example.BancoDeDados.Repositores.EventoRepository;
-import com.example.BancoDeDados.Repositores.MateriaRepositores;
-import com.example.BancoDeDados.Repositores.NotaEventoRepository;
+import com.example.BancoDeDados.Repositores.*;
 import com.example.BancoDeDados.ResponseDTO.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -19,6 +16,8 @@ import java.util.stream.Collectors;
 @Service
 public class EventoService {
 
+
+    private NotaRepository notaRepository;
     private final EventoRepository eventoRepository;
     private final MateriaRepositores materiaRepository;
     private final EstudanteRepositores estudanteRepository;
@@ -267,6 +266,9 @@ public class EventoService {
 
         return evento;
     }
+
+
+
 
 
     public NotaEventoResponse convertToResponse(NotaEvento notaEvento) {
