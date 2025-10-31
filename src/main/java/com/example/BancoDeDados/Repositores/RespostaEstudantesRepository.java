@@ -58,4 +58,8 @@ public interface RespostaEstudantesRepository extends JpaRepository<RespostaEstu
             "JOIN FETCH re.estudante e " +
             "WHERE q.lista.id = :listaId")
     List<RespostaEstudantes> findByListaIdWithJoins(@Param("listaId") UUID listaId);
+
+    @Query("SELECT re FROM RespostaEstudantes re JOIN FETCH re.questao WHERE re.estudante.id = :estudanteId AND re.questao.id IN :questaoIds")
+    List<RespostaEstudantes> findByEstudanteIdAndQuestaoIdIn(@Param("estudanteId") UUID estudanteId,
+                                                             @Param("questaoIds") List<Integer> questaoIds);
 }

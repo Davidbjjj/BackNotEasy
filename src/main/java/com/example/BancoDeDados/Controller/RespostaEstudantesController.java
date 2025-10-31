@@ -1,5 +1,6 @@
 package com.example.BancoDeDados.Controller;
 
+import com.example.BancoDeDados.ResponseDTO.EnviarMultiplasRespostasDTO;
 import com.example.BancoDeDados.ResponseDTO.EnviarRespostaDTO;
 import com.example.BancoDeDados.ResponseDTO.RespostaEstudanteDTO;
 import com.example.BancoDeDados.ResponseDTO.RespostasListaDTO;
@@ -29,6 +30,17 @@ public class RespostaEstudantesController {
     public ResponseEntity<String> enviarResposta(@RequestBody EnviarRespostaDTO enviarRespostaDTO) {
         respostaEstudantesService.salvarResposta(enviarRespostaDTO);
         return ResponseEntity.ok("Resposta enviada com sucesso.");
+    }
+    @PostMapping("/respostas/multiplas")
+    public ResponseEntity<String> salvarMultiplasRespostas(@RequestBody EnviarMultiplasRespostasDTO multiplasRespostasDTO) {
+        try {
+            respostaEstudantesService.salvarMultiplasRespostasOtimizado(multiplasRespostasDTO);
+            return ResponseEntity.ok("Respostas salvas com sucesso!");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Erro ao salvar respostas: " + e.getMessage());
+        }
     }
     @GetMapping("/questoes-respondidas")
     public ResponseEntity<List<Integer>> buscarQuestoesRespondidasPorListaEEstudante(

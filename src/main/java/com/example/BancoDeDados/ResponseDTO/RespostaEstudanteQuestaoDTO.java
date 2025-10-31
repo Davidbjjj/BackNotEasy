@@ -13,9 +13,7 @@ public class RespostaEstudanteQuestaoDTO {
     private Integer questaoId;
     private UUID estudanteId;
     private String nomeEstudante;
-    private Boolean resposta;
     private Integer alternativa;
     private Boolean correta;
-
 
 }

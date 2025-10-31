@@ -49,7 +49,7 @@ public class ListaController {
         return listaService.buscarTodasListas();
     }
 
-    @PostMapping("/salvar-questoes-do-pdf/{listaId}")
+    @PostMapping("/salvar-questoes-docs/{listaId}")
     public ListaAddResponseDTO salvarQuestoesDoPdf(@PathVariable UUID listaId) {
         List<Questao> questoesProcessadas = tratarRespostaIAService.processarRespostaIA();
 

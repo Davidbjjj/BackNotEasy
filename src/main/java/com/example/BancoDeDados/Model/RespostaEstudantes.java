@@ -29,7 +29,11 @@ public class RespostaEstudantes {
 
 
     public boolean isCorreta() {
-        return resposta.equals(questao.getGabarito());
+
+        if (this.questao == null || this.alternativa == null || this.questao.getGabarito() == null) {
+            return false;
+        }
+        return this.alternativa.equals(this.questao.getGabarito());
     }
 }
 

@@ -14,10 +14,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -50,46 +47,43 @@ public class RespostaEstudantesService {
     /**
      * Salva a resposta do estudante para uma determinada questão.
      */
-
     public void salvarResposta(EnviarRespostaDTO enviarRespostaDTO) {
-        Questao questao = questaoRepository.findById(enviarRespostaDTO.getQuestaoId())
+        Questao questao = questaoRepository.findById(enviarRespostaDTO.questaoId())
                 .orElseThrow(() -> new IllegalArgumentException("Questão não encontrada."));
 
-        Estudante estudante = estudanteRepository.findById(enviarRespostaDTO.getEstudanteId())
+        Estudante estudante = estudanteRepository.findById(enviarRespostaDTO.estudanteId())
                 .orElseThrow(() -> new IllegalArgumentException("Estudante não encontrado."));
 
-        // Verificar se já existe resposta para atualizar
+        if (enviarRespostaDTO.alternativa() < 0 ||
+                enviarRespostaDTO.alternativa() >= questao.getAlternativas().size()) {
+            throw new IllegalArgumentException("Alternativa inválida para esta questão.");
+        }
+
         Optional<RespostaEstudantes> respostaExistente =
                 respostaEstudantesRepository.findByQuestaoIdAndEstudanteId(
-                        enviarRespostaDTO.getQuestaoId(),
-                        enviarRespostaDTO.getEstudanteId()
+                        enviarRespostaDTO.questaoId(),
+                        enviarRespostaDTO.estudanteId()
                 );
 
         RespostaEstudantes resposta;
 
         if (respostaExistente.isPresent()) {
-            // Atualizar resposta existente
             resposta = respostaExistente.get();
-            resposta.setResposta(enviarRespostaDTO.getResposta());
-            resposta.setAlternativa(enviarRespostaDTO.getAlternativa());
+            resposta.setAlternativa(enviarRespostaDTO.alternativa());
         } else {
-            // Criar nova resposta
             resposta = new RespostaEstudantes();
             resposta.setQuestao(questao);
             resposta.setEstudante(estudante);
-            resposta.setResposta(enviarRespostaDTO.getResposta());
-            resposta.setAlternativa(enviarRespostaDTO.getAlternativa());
+            resposta.setAlternativa(enviarRespostaDTO.alternativa());
         }
+
+        resposta.setResposta(resposta.isCorreta());
 
         respostaEstudantesRepository.save(resposta);
     }
 
-
-    /**
-     * Retorna as questões associadas a uma lista específica para um determinado estudante.
-     */
     public List<Integer> buscarQuestoesPorListaEEstudante(UUID listaId, UUID estudanteId) {
-        if (!estudanteRepository.existsById((estudanteId))) {
+        if (!estudanteRepository.existsById(estudanteId)) {
             throw new IllegalArgumentException("Estudante não encontrado.");
         }
 
@@ -114,10 +108,14 @@ public class RespostaEstudantesService {
                 resposta.getId(),
                 resposta.getQuestao().getId(),
                 resposta.getEstudante().getId(),
-                resposta.getResposta(),
-                resposta.getAlternativa()
+                resposta.getAlternativa(),
+                resposta.isCorreta() // Campo calculado no backend
         );
     }
+
+    /**
+     * Busca desempenho por lista
+     */
     public List<DesempenhoEstudanteDTO> buscarDesempenhoPorLista(UUID listaId) {
         List<Questao> questoesDaLista = questaoRepository.findByLista_Id(listaId);
 
@@ -139,7 +137,7 @@ public class RespostaEstudantesService {
                 .map(resposta -> new DesempenhoEstudanteDTO(
                         resposta.getEstudante().getId(),
                         resposta.getQuestao().getId(),
-                        resposta.isCorreta()
+                        resposta.isCorreta() // Campo calculado no backend
                 ))
                 .collect(Collectors.toList());
 
@@ -148,7 +146,9 @@ public class RespostaEstudantesService {
         return desempenho;
     }
 
-
+    /**
+     * Busca questões respondidas por lista e estudante
+     */
     public List<Integer> buscarQuestoesRespondidasPorListaEEstudante(UUID listaId, UUID estudanteId) {
         // Verificar se estudante existe
         if (!estudanteRepository.existsById(estudanteId)) {
@@ -163,8 +163,10 @@ public class RespostaEstudantesService {
         // Buscar IDs das questões já respondidas pelo estudante na lista específica
         return respostaEstudantesRepository.findQuestoesRespondidasByEstudanteAndLista(estudanteId, listaId);
     }
-    
-    
+
+    /**
+     * Calcula pontuação por lista
+     */
     public Double calcularPontuacaoPorLista(UUID listaId, UUID estudanteId) {
         List<RespostaEstudantes> respostas = respostaEstudantesRepository.findByEstudanteIdAndQuestaoListaId(estudanteId, listaId);
 
@@ -179,16 +181,9 @@ public class RespostaEstudantesService {
         return (double) respostasCorretas / respostas.size() * 100;
     }
 
-    private RespostaEstudanteDTO convertToDTO(RespostaEstudantes resposta) {
-        return new RespostaEstudanteDTO(
-                resposta.getId(),
-                resposta.getQuestao().getId(),
-                resposta.getEstudante().getId(),
-                resposta.getResposta(),
-                resposta.getAlternativa()
-        );
-    }
-
+    /**
+     * Busca resposta por questão e estudante ou retorna vazio
+     */
     public RespostaEstudanteDTO buscarRespostaPorQuestaoEEstudanteOuVazio(Integer questaoId, UUID estudanteId) {
         Optional<RespostaEstudantes> respostaOpt = respostaEstudantesRepository
                 .findByQuestaoIdAndEstudanteId(questaoId, estudanteId);
@@ -199,14 +194,18 @@ public class RespostaEstudantesService {
                     resposta.getId(),
                     resposta.getQuestao().getId(),
                     resposta.getEstudante().getId(),
-                    resposta.getResposta(),
-                    resposta.getAlternativa()
+                    resposta.getAlternativa(),
+                    resposta.isCorreta() // Campo calculado no backend
             );
         } else {
-            // Retorna um DTO vazio/null para indicar que não há resposta
+            // Retorna um DTO vazio para indicar que não há resposta
             return new RespostaEstudanteDTO(null, questaoId, estudanteId, null, null);
         }
     }
+
+    /**
+     * Busca todas as respostas por lista
+     */
     public RespostasListaDTO buscarRespostasPorLista(UUID listaId) {
         // Primeiro, verifica se a lista existe
         Lista lista = listaRepository.findById(listaId)
@@ -217,15 +216,16 @@ public class RespostaEstudantesService {
 
         // Converte para DTOs
         List<RespostaEstudanteQuestaoDTO> respostaDTOs = respostas.stream()
-                .map(resposta -> new RespostaEstudanteQuestaoDTO(
-                        resposta.getId(),
-                        resposta.getQuestao().getId(),
-                        resposta.getEstudante().getId(),
-                        resposta.getEstudante().getNome(), // assumindo que Estudante tem um campo 'nome'
-                        resposta.getResposta(),
-                        resposta.getAlternativa(),
-                        resposta.isCorreta()
-                ))
+                .map(resposta -> {
+                    RespostaEstudanteQuestaoDTO dto = new RespostaEstudanteQuestaoDTO();
+                    dto.setRespostaId(resposta.getId());
+                    dto.setQuestaoId(resposta.getQuestao().getId());
+                    dto.setEstudanteId(resposta.getEstudante().getId());
+                    dto.setNomeEstudante(resposta.getEstudante().getNome());
+                    dto.setAlternativa(resposta.getAlternativa());
+                    dto.setCorreta(resposta.isCorreta()); // Campo calculado no backend
+                    return dto;
+                })
                 .collect(Collectors.toList());
 
         return new RespostasListaDTO(
@@ -234,7 +234,67 @@ public class RespostaEstudantesService {
                 respostaDTOs
         );
     }
+    /**
+     * Versão otimizada para salvar múltiplas respostas
+     */
+    @Transactional
+    public void salvarMultiplasRespostasOtimizado(EnviarMultiplasRespostasDTO multiplasRespostasDTO) {
+        UUID estudanteId = multiplasRespostasDTO.estudanteId();
+        UUID listaId = multiplasRespostasDTO.listaId();
+
+        // Validações básicas
+        if (!estudanteRepository.existsById(estudanteId)) {
+            throw new IllegalArgumentException("Estudante não encontrado.");
+        }
+
+        if (!listaRepository.existsById(listaId)) {
+            throw new IllegalArgumentException("Lista não encontrada.");
+        }
+
+        // Busca todas as questões da lista de uma vez
+        List<Questao> questõesDaLista = questaoRepository.findByLista_Id(listaId);
+        Map<Integer, Questao> questaoMap = questõesDaLista.stream()
+                .collect(Collectors.toMap(Questao::getId, q -> q));
+
+        // Busca respostas existentes de uma vez
+        List<Integer> questaoIds = multiplasRespostasDTO.respostas().stream()
+                .map(RespostaQuestaoDTO::questaoId)
+                .collect(Collectors.toList());
+
+        List<RespostaEstudantes> respostasExistentes = respostaEstudantesRepository
+                .findByEstudanteIdAndQuestaoIdIn(estudanteId, questaoIds);
+
+        Map<Integer, RespostaEstudantes> respostaExistenteMap = respostasExistentes.stream()
+                .collect(Collectors.toMap(resposta -> resposta.getQuestao().getId(), resposta -> resposta));
+
+        List<RespostaEstudantes> respostasParaSalvar = new ArrayList<>();
+
+        for (RespostaQuestaoDTO respostaDTO : multiplasRespostasDTO.respostas()) {
+            Questao questao = questaoMap.get(respostaDTO.questaoId());
+
+            if (questao == null) {
+                throw new IllegalArgumentException("Questão " + respostaDTO.questaoId() + " não pertence à lista.");
+            }
+
+            if (respostaDTO.alternativa() < 0 || respostaDTO.alternativa() >= questao.getAlternativas().size()) {
+                throw new IllegalArgumentException("Alternativa inválida para a questão " + respostaDTO.questaoId());
+            }
+
+            RespostaEstudantes resposta = respostaExistenteMap.get(respostaDTO.questaoId());
+
+            if (resposta == null) {
+                resposta = new RespostaEstudantes();
+                resposta.setQuestao(questao);
+                resposta.setEstudante(estudanteRepository.getReferenceById(estudanteId));
+            }
+
+            resposta.setAlternativa(respostaDTO.alternativa());
+            resposta.setResposta(resposta.isCorreta());
+
+            respostasParaSalvar.add(resposta);
+        }
+
+        respostaEstudantesRepository.saveAll(respostasParaSalvar);
+    }
 
 }
-
-
