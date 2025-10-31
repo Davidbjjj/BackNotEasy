@@ -16,6 +16,8 @@ import java.util.stream.Collectors;
 @Service
 public class EventoService {
 
+
+    private NotaRepository notaRepository;
     private final EventoRepository eventoRepository;
     private final MateriaRepositores materiaRepository;
     private final EstudanteRepositores estudanteRepository;
@@ -269,6 +271,9 @@ public class EventoService {
 
         return evento;
     }
+
+
+
 
 
     public NotaEventoResponse convertToResponse(NotaEvento notaEvento) {
