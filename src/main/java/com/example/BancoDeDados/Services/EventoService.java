@@ -3,10 +3,7 @@ package com.example.BancoDeDados.Services;
 import com.example.BancoDeDados.Exceptions.ResourceNotFoundException;
 import com.example.BancoDeDados.Mapper.EventoMapper;
 import com.example.BancoDeDados.Model.*;
-import com.example.BancoDeDados.Repositores.EstudanteRepositores;
-import com.example.BancoDeDados.Repositores.EventoRepository;
-import com.example.BancoDeDados.Repositores.MateriaRepositores;
-import com.example.BancoDeDados.Repositores.NotaEventoRepository;
+import com.example.BancoDeDados.Repositores.*;
 import com.example.BancoDeDados.ResponseDTO.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -23,18 +20,23 @@ public class EventoService {
     private final MateriaRepositores materiaRepository;
     private final EstudanteRepositores estudanteRepository;
     private final NotaEventoRepository notaEventoRepository;
-
+    private final ListaEventoRepository listaEventoRepository;
+    private final ListaRepository listaRepository;
     @Autowired
     private EventoMapper eventoMapper;
 
     public EventoService(EventoRepository eventoRepository,
                          MateriaRepositores materiaRepository,
                          EstudanteRepositores estudanteRepository,
-                         NotaEventoRepository notaEventoRepository) {
+                         NotaEventoRepository notaEventoRepository,
+                         ListaEventoRepository listaEventoRepository,
+                         ListaRepository listaRepository) {
         this.eventoRepository = eventoRepository;
         this.materiaRepository = materiaRepository;
         this.estudanteRepository = estudanteRepository;
         this.notaEventoRepository = notaEventoRepository;
+        this.listaEventoRepository=listaEventoRepository;
+        this.listaRepository=listaRepository;
     }
 
     @Transactional
@@ -318,5 +320,61 @@ public class EventoService {
     private Estudante findEstudanteByIdOrThrow(UUID estudanteId) {
         return estudanteRepository.findById(estudanteId)
                 .orElseThrow(() -> new ResourceNotFoundException("Estudante não encontrado"));
+    }
+
+    @Transactional
+    public ListaEventoResponse adicionarListaAoEvento(UUID eventoId, ListaEventoRequest request) {
+        Evento evento = findEventoByIdOrThrow(eventoId);
+        Lista lista = findListaByIdOrThrow(request.getListaId());
+
+        // Verificar se o relacionamento já existe
+        boolean jaExiste = listaEventoRepository.existsByListaAndEvento(lista, evento);
+        if (jaExiste) {
+            throw new IllegalStateException("Evento já está vinculado a esta lista");
+        }
+
+        // Criar novo relacionamento
+        ListaEvento listaEvento = new ListaEvento();
+        listaEvento.setLista(lista);
+        listaEvento.setEvento(evento);
+
+        ListaEvento salvo = listaEventoRepository.save(listaEvento);
+        return convertToListaEventoResponse(salvo);
+    }
+
+
+    @Transactional
+    public void removerListaDoEvento(UUID eventoId, UUID listaId) {
+        Evento evento = findEventoByIdOrThrow(eventoId);
+        Lista lista = findListaByIdOrThrow(listaId);
+
+        ListaEvento listaEvento = listaEventoRepository.findByListaAndEvento(lista, evento)
+                .orElseThrow(() -> new ResourceNotFoundException("Relação lista-evento não encontrada"));
+
+        listaEventoRepository.delete(listaEvento);
+    }
+
+
+    // ===========================
+    // CONVERSÕES
+    // ===========================
+
+    private ListaEventoResponse convertToListaEventoResponse(ListaEvento listaEvento) {
+        ListaEventoResponse response = new ListaEventoResponse();
+        response.setId(listaEvento.getId());
+        response.setListaId(listaEvento.getLista().getId());
+        response.setListaTitulo(listaEvento.getLista().getTitulo());
+        response.setEventoId(listaEvento.getEvento().getId());
+        response.setEventoTitulo(listaEvento.getEvento().getTitulo());
+        return response;
+    }
+
+    // ===========================
+    // REPOSITORY HELPERS
+    // ===========================
+
+    private Lista findListaByIdOrThrow(UUID listaId) {
+        return listaRepository.findById(listaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Lista não encontrada"));
     }
 }

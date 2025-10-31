@@ -5,14 +5,17 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.UUID;
-
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
-public class EnviarRespostaDTO {
-
+@AllArgsConstructor
+public class RespostaEstudanteQuestaoDTO {
+    private Long respostaId;
     private Integer questaoId;
     private UUID estudanteId;
+    private String nomeEstudante;
     private Boolean resposta;
     private Integer alternativa;
+    private Boolean correta;
+
+
 }

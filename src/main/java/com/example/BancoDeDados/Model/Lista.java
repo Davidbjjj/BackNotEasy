@@ -1,6 +1,7 @@
 package com.example.BancoDeDados.Model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.AllArgsConstructor;
@@ -46,5 +47,9 @@ public class Lista {
             inverseJoinColumns = @JoinColumn(name = "estudante_id")
     )
     private List<Estudante> estudantes;
+
+    @OneToMany(mappedBy = "lista", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference("lista-eventos")
+    private List<ListaEvento> eventos = new ArrayList<>();
 
 }

@@ -1,24 +1,27 @@
 package com.example.BancoDeDados.Services;
 
+import com.example.BancoDeDados.Exceptions.ResourceNotFoundException;
 import com.example.BancoDeDados.Model.Estudante;
+import com.example.BancoDeDados.Model.Lista;
 import com.example.BancoDeDados.Model.Questao;
 import com.example.BancoDeDados.Repositores.EstudanteRepositores;
 import com.example.BancoDeDados.Repositores.ListaRepository;
 import com.example.BancoDeDados.Repositores.QuestaoRepositores;
-import com.example.BancoDeDados.ResponseDTO.DesempenhoEstudanteDTO;
-import com.example.BancoDeDados.ResponseDTO.EnviarRespostaDTO;
-import com.example.BancoDeDados.ResponseDTO.RespostaEstudanteDTO;
+import com.example.BancoDeDados.ResponseDTO.*;
 import com.example.BancoDeDados.Model.RespostaEstudantes;
 import com.example.BancoDeDados.Repositores.RespostaEstudantesRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional
 public class RespostaEstudantesService {
 
     @Autowired
@@ -47,6 +50,7 @@ public class RespostaEstudantesService {
     /**
      * Salva a resposta do estudante para uma determinada questão.
      */
+
     public void salvarResposta(EnviarRespostaDTO enviarRespostaDTO) {
         Questao questao = questaoRepository.findById(enviarRespostaDTO.getQuestaoId())
                 .orElseThrow(() -> new IllegalArgumentException("Questão não encontrada."));
@@ -54,13 +58,32 @@ public class RespostaEstudantesService {
         Estudante estudante = estudanteRepository.findById(enviarRespostaDTO.getEstudanteId())
                 .orElseThrow(() -> new IllegalArgumentException("Estudante não encontrado."));
 
-        RespostaEstudantes resposta = new RespostaEstudantes();
-        resposta.setQuestao(questao);
-        resposta.setEstudante(estudante);
-        resposta.setResposta(enviarRespostaDTO.getResposta());
+        // Verificar se já existe resposta para atualizar
+        Optional<RespostaEstudantes> respostaExistente =
+                respostaEstudantesRepository.findByQuestaoIdAndEstudanteId(
+                        enviarRespostaDTO.getQuestaoId(),
+                        enviarRespostaDTO.getEstudanteId()
+                );
+
+        RespostaEstudantes resposta;
+
+        if (respostaExistente.isPresent()) {
+            // Atualizar resposta existente
+            resposta = respostaExistente.get();
+            resposta.setResposta(enviarRespostaDTO.getResposta());
+            resposta.setAlternativa(enviarRespostaDTO.getAlternativa());
+        } else {
+            // Criar nova resposta
+            resposta = new RespostaEstudantes();
+            resposta.setQuestao(questao);
+            resposta.setEstudante(estudante);
+            resposta.setResposta(enviarRespostaDTO.getResposta());
+            resposta.setAlternativa(enviarRespostaDTO.getAlternativa());
+        }
 
         respostaEstudantesRepository.save(resposta);
     }
+
 
     /**
      * Retorna as questões associadas a uma lista específica para um determinado estudante.
@@ -83,13 +106,16 @@ public class RespostaEstudantesService {
     public RespostaEstudanteDTO buscarRespostaPorQuestaoEEstudante(Integer questaoId, UUID estudanteId) {
         RespostaEstudantes resposta = respostaEstudantesRepository
                 .findByQuestaoIdAndEstudanteId(questaoId, estudanteId)
-                .orElseThrow(() -> new IllegalArgumentException("Resposta não encontrada."));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Resposta não encontrada para a questão " + questaoId + " e estudante " + estudanteId
+                ));
 
         return new RespostaEstudanteDTO(
                 resposta.getId(),
                 resposta.getQuestao().getId(),
                 resposta.getEstudante().getId(),
-                resposta.getResposta()
+                resposta.getResposta(),
+                resposta.getAlternativa()
         );
     }
     public List<DesempenhoEstudanteDTO> buscarDesempenhoPorLista(UUID listaId) {
@@ -123,5 +149,92 @@ public class RespostaEstudantesService {
     }
 
 
+    public List<Integer> buscarQuestoesRespondidasPorListaEEstudante(UUID listaId, UUID estudanteId) {
+        // Verificar se estudante existe
+        if (!estudanteRepository.existsById(estudanteId)) {
+            throw new ResourceNotFoundException("Estudante não encontrado com ID: " + estudanteId);
+        }
+
+        // Verificar se a lista existe
+        if (!listaRepository.existsById(listaId)) {
+            throw new ResourceNotFoundException("Lista não encontrada com ID: " + listaId);
+        }
+
+        // Buscar IDs das questões já respondidas pelo estudante na lista específica
+        return respostaEstudantesRepository.findQuestoesRespondidasByEstudanteAndLista(estudanteId, listaId);
+    }
+    
+    
+    public Double calcularPontuacaoPorLista(UUID listaId, UUID estudanteId) {
+        List<RespostaEstudantes> respostas = respostaEstudantesRepository.findByEstudanteIdAndQuestaoListaId(estudanteId, listaId);
+
+        if (respostas.isEmpty()) {
+            return 0.0;
+        }
+
+        long respostasCorretas = respostas.stream()
+                .filter(RespostaEstudantes::isCorreta)
+                .count();
+
+        return (double) respostasCorretas / respostas.size() * 100;
+    }
+
+    private RespostaEstudanteDTO convertToDTO(RespostaEstudantes resposta) {
+        return new RespostaEstudanteDTO(
+                resposta.getId(),
+                resposta.getQuestao().getId(),
+                resposta.getEstudante().getId(),
+                resposta.getResposta(),
+                resposta.getAlternativa()
+        );
+    }
+
+    public RespostaEstudanteDTO buscarRespostaPorQuestaoEEstudanteOuVazio(Integer questaoId, UUID estudanteId) {
+        Optional<RespostaEstudantes> respostaOpt = respostaEstudantesRepository
+                .findByQuestaoIdAndEstudanteId(questaoId, estudanteId);
+
+        if (respostaOpt.isPresent()) {
+            RespostaEstudantes resposta = respostaOpt.get();
+            return new RespostaEstudanteDTO(
+                    resposta.getId(),
+                    resposta.getQuestao().getId(),
+                    resposta.getEstudante().getId(),
+                    resposta.getResposta(),
+                    resposta.getAlternativa()
+            );
+        } else {
+            // Retorna um DTO vazio/null para indicar que não há resposta
+            return new RespostaEstudanteDTO(null, questaoId, estudanteId, null, null);
+        }
+    }
+    public RespostasListaDTO buscarRespostasPorLista(UUID listaId) {
+        // Primeiro, verifica se a lista existe
+        Lista lista = listaRepository.findById(listaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Lista não encontrada com id: " + listaId));
+
+        // Busca todas as respostas para as questões desta lista
+        List<RespostaEstudantes> respostas = respostaEstudantesRepository.findByListaIdWithJoins(listaId);
+
+        // Converte para DTOs
+        List<RespostaEstudanteQuestaoDTO> respostaDTOs = respostas.stream()
+                .map(resposta -> new RespostaEstudanteQuestaoDTO(
+                        resposta.getId(),
+                        resposta.getQuestao().getId(),
+                        resposta.getEstudante().getId(),
+                        resposta.getEstudante().getNome(), // assumindo que Estudante tem um campo 'nome'
+                        resposta.getResposta(),
+                        resposta.getAlternativa(),
+                        resposta.isCorreta()
+                ))
+                .collect(Collectors.toList());
+
+        return new RespostasListaDTO(
+                lista.getId(),
+                lista.getTitulo(),
+                respostaDTOs
+        );
+    }
 
 }
+
+

@@ -20,9 +20,13 @@ public class RespostaEstudantes {
     @Column(nullable = false)
     private Boolean resposta;
 
+    @Column(nullable = false)
+    private Integer alternativa;
+
     @ManyToOne
     @JoinColumn(name = "estudante_id", nullable = false)
     private Estudante estudante;
+
 
     public boolean isCorreta() {
         return resposta.equals(questao.getGabarito());
