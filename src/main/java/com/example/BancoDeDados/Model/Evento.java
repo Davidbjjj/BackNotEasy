@@ -54,6 +54,8 @@ public class Evento {
     @JsonManagedReference
     private List<NotaEvento> notasEstudante = new ArrayList<>();
 
-
+    @OneToMany(mappedBy = "evento", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @JsonManagedReference("evento-listas")
+    private List<ListaEvento> listas = new ArrayList<>();
 
 }

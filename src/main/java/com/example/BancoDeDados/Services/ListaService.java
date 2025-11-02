@@ -37,6 +37,19 @@ public class ListaService {
     @Autowired
     private ProfessorRepositores professorRepository;
 
+    @Transactional
+    public void salvarQuestoesComLista(List<Questao> questoes, UUID listaId) {
+        // Buscar a lista (ajuste conforme sua entidade Lista)
+        Lista lista = listaRepository.findById(listaId)
+                .orElseThrow(() -> new RuntimeException("Lista não encontrada com ID: " + listaId));
+
+        // Salvar cada questão e associar à lista
+        for (Questao questao : questoes) {
+            questao.setLista(lista); // Assumindo que Questao tem um campo 'lista'
+            questaoRepository.save(questao);
+        }
+    }
+
     // Métodos para Questões
     public ListaResponseDTO adicionarQuestao(UUID listaId, Integer questaoId) {
         Lista lista = listaRepository.findById(listaId)

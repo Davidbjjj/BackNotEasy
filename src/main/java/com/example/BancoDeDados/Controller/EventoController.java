@@ -116,4 +116,23 @@ public class EventoController {
     public List<Estudante> listarAlunosDoEvento(@PathVariable UUID eventoId) {
         return service.listarEstudantesDoEvento(eventoId);
     }
+
+    @PostMapping("/{eventoId}/listas")
+    public ResponseEntity<ListaEventoResponse> adicionarListaAoEvento(
+            @PathVariable UUID eventoId,
+            @RequestBody ListaEventoRequest request) {
+        ListaEventoResponse response = service.adicionarListaAoEvento(eventoId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+
+    @DeleteMapping("/{eventoId}/listas/{listaId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void removerListaDoEvento(
+            @PathVariable UUID eventoId,
+            @PathVariable UUID listaId) {
+        service.removerListaDoEvento(eventoId, listaId);
+    }
+
 }
+

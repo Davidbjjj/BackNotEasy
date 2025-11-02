@@ -17,8 +17,10 @@ public interface NotaEventoRepository extends JpaRepository<NotaEvento, UUID> {
 
 
     Optional<NotaEvento> findByEstudanteAndEvento(Estudante estudante, Evento evento);
-
-    Optional<NotaEvento> findByEstudanteAndMateriaAndTime(Estudante estudante, Materia materia, Long time);
+    @Query("SELECT ne FROM NotaEvento ne WHERE ne.estudante.id = :estudanteId AND ne.evento.id = :eventoId")
+    Optional<NotaEvento> findByEstudanteIdAndEventoId(@Param("estudanteId") UUID estudanteId,
+                                                      @Param("eventoId") UUID eventoId);
+//    Optional<NotaEvento> findByEstudanteAndMateriaAndTime(Estudante estudante, Materia materia, Long time);
 
     List<NotaEvento> findByEvento(Evento evento);
 

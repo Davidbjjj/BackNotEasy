@@ -6,12 +6,8 @@ import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
-public class EnviarRespostaDTO {
-
-    private Integer questaoId;
-    private UUID estudanteId;
-    private Boolean resposta;
-}
+public record EnviarRespostaDTO(
+        UUID estudanteId,
+        Integer questaoId,
+        Integer alternativa
+) {}
