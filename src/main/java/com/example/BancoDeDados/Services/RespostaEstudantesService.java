@@ -1,19 +1,14 @@
 package com.example.BancoDeDados.Services;
 
 import com.example.BancoDeDados.Exceptions.ResourceNotFoundException;
-import com.example.BancoDeDados.Model.Estudante;
-import com.example.BancoDeDados.Model.Lista;
-import com.example.BancoDeDados.Model.Questao;
-import com.example.BancoDeDados.Repositores.EstudanteRepositores;
-import com.example.BancoDeDados.Repositores.ListaRepository;
-import com.example.BancoDeDados.Repositores.QuestaoRepositores;
+import com.example.BancoDeDados.Model.*;
+import com.example.BancoDeDados.Repositores.*;
 import com.example.BancoDeDados.ResponseDTO.*;
-import com.example.BancoDeDados.Model.RespostaEstudantes;
-import com.example.BancoDeDados.Repositores.RespostaEstudantesRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -33,15 +28,27 @@ public class RespostaEstudantesService {
     @Autowired
     private EstudanteRepositores estudanteRepository;
 
+    @Autowired
+    private NotaListaService notaListaService;
+
+    @Autowired
+    private NotaEventoRepository notaEventoRepository;
+
+    @Autowired
+    private ListaEventoRepository listaEventoRepository;
+
+
     public RespostaEstudantesService(
             RespostaEstudantesRepository respostaEstudantesRepository,
             QuestaoRepositores questaoRepository,
             EstudanteRepositores estudanteRepository,
-            ListaRepository listaRepository) {
+            ListaRepository listaRepository,
+            NotaListaService notaListaService) {
         this.respostaEstudantesRepository = respostaEstudantesRepository;
         this.questaoRepository = questaoRepository;
         this.estudanteRepository = estudanteRepository;
         this.listaRepository = listaRepository;
+        this.notaListaService= notaListaService;
     }
 
     /**
@@ -80,6 +87,85 @@ public class RespostaEstudantesService {
         resposta.setResposta(resposta.isCorreta());
 
         respostaEstudantesRepository.save(resposta);
+
+        respostaEstudantesRepository.save(resposta);
+
+
+        notaListaService.atualizarNotaAposResposta(questao.getLista().getId(), estudante.getId());
+        sincronizarComEventosAssociados(questao.getLista().getId(), estudante.getId());
+    }
+    private void sincronizarComEventosAssociados(UUID listaId, UUID estudanteId) {
+        try {
+            // Busca todos os eventos associados a esta lista
+            List<ListaEvento> listaEventos = listaEventoRepository.findByListaId(listaId);
+
+            for (ListaEvento listaEvento : listaEventos) {
+                Evento evento = listaEvento.getEvento();
+
+                // Sincroniza a nota deste estudante específico
+                sincronizarNotaEstudanteParaEvento(listaId, estudanteId, evento);
+            }
+        } catch (Exception e) {
+            System.err.println("Erro ao sincronizar com eventos: " + e.getMessage());
+        }
+    }
+    private void sincronizarNotaEstudanteParaEvento(UUID listaId, UUID estudanteId, Evento evento) {
+        try {
+            Optional<ListaEstudanteNota> notaListaOpt = notaListaService.buscarNotaEstudanteOptional(listaId, estudanteId);
+
+            if (notaListaOpt.isPresent()) {
+                ListaEstudanteNota notaLista = notaListaOpt.get();
+
+                NotaEvento notaEvento = notaEventoRepository.findByEstudanteIdAndEventoId(estudanteId, evento.getId())
+                        .orElseGet(() -> {
+                            NotaEvento novaNotaEvento = new NotaEvento();
+                            novaNotaEvento.setEstudante(estudanteRepository.getReferenceById(estudanteId));
+                            novaNotaEvento.setEvento(evento);
+                            novaNotaEvento.setProfessor(evento.getProfessor());
+                            novaNotaEvento.setStatusEntrega(NotaEvento.StatusEntrega.ENTREGUE);
+                            return novaNotaEvento;
+                        });
+
+                Double notaConvertida = converterNotaListaParaEvento(notaLista.getNota(), evento.getNotaMaxima());
+                notaEvento.setNota(notaConvertida);
+                notaEvento.setObservacao("Nota atualizada automaticamente da lista");
+
+                notaEventoRepository.save(notaEvento);
+            }
+        } catch (Exception e) {
+            System.err.println("Erro ao sincronizar nota do estudante " + estudanteId + " para evento: " + e.getMessage());
+        }
+    }
+    private Double converterNotaListaParaEvento(BigDecimal notaLista, Double notaMaximaEvento) {
+        if (notaLista == null) {
+            return null;
+        }
+
+        // Converte BigDecimal para double
+        double notaListaDouble = notaLista.doubleValue();
+
+        // Se a nota máxima do evento é 10, retorna direto
+        if (notaMaximaEvento == 10.0) {
+            return notaListaDouble;
+        }
+
+        // Faz a proporção: (notaLista / 10) * notaMaximaEvento
+        return (notaListaDouble / 10.0) * notaMaximaEvento;
+    }
+
+    // Versão alternativa se estiver usando Double na ListaEstudanteNota:
+    private Double converterNotaListaParaEvento(Double notaLista, Double notaMaximaEvento) {
+        if (notaLista == null) {
+            return null;
+        }
+
+        // Se a nota máxima do evento é 10, retorna direto
+        if (notaMaximaEvento == 10.0) {
+            return notaLista;
+        }
+
+        // Faz a proporção: (notaLista / 10) * notaMaximaEvento
+        return (notaLista / 10.0) * notaMaximaEvento;
     }
 
     public List<Integer> buscarQuestoesPorListaEEstudante(UUID listaId, UUID estudanteId) {
@@ -295,6 +381,8 @@ public class RespostaEstudantesService {
         }
 
         respostaEstudantesRepository.saveAll(respostasParaSalvar);
+        notaListaService.atualizarNotaAposResposta(multiplasRespostasDTO.listaId(), multiplasRespostasDTO.estudanteId());
+
     }
 
 }

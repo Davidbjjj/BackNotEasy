@@ -9,10 +9,9 @@ import com.example.BancoDeDados.ResponseDTO.ListaAddResponseDTO;
 import com.example.BancoDeDados.ResponseDTO.ListaResponseDTO;
 import com.example.BancoDeDados.ResponseDTO.QuestaoRequestDTO;
 import com.example.BancoDeDados.ResponseDTO.QuestaoResponseDTO;
-import com.example.BancoDeDados.Services.ListaService;
-import com.example.BancoDeDados.Services.QuestaoService;
-import com.example.BancoDeDados.Services.TratarRespostaIAService;
+import com.example.BancoDeDados.Services.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -39,6 +38,12 @@ public class ListaController {
 
     @Autowired
     private TratarRespostaIAService tratarRespostaIAService;
+
+    @Autowired
+    private EventoService eventoService;
+
+    @Autowired
+    private NotaListaService notaListaService;
 
     public ListaController(ListaService listaService) {
         this.listaService = listaService;
@@ -138,5 +143,59 @@ public class ListaController {
         Lista lista = listaRepository.findById(listaId)
                 .orElseThrow(() -> new RuntimeException("Lista não encontrada"));
         return lista.getEstudantes();
+    }
+    @PostMapping("/eventos/{eventoId}/listas/{listaId}/sincronizar-notas")
+    public ResponseEntity<?> sincronizarNotas(
+            @PathVariable UUID eventoId,
+            @PathVariable UUID listaId) {
+        try {
+            eventoService.sincronizarNotasListaEvento(eventoId, listaId);
+            return ResponseEntity.ok("Notas sincronizadas com sucesso");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+    @PostMapping("/lista/{listaId}/estudante/{estudanteId}/calcular")
+    public ResponseEntity<?> calcularNota(
+            @PathVariable UUID listaId,
+            @PathVariable UUID estudanteId) {
+        try {
+            var nota = notaListaService.calcularESalvarNota(listaId, estudanteId);
+            return ResponseEntity.ok(nota);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/lista/{listaId}/calcular-todos")
+    public ResponseEntity<?> calcularNotasParaTodos(@PathVariable UUID listaId) {
+        try {
+            notaListaService.calcularNotasParaTodosEstudantes(listaId);
+            return ResponseEntity.ok("Notas calculadas para todos os estudantes");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/lista/{listaId}/estudante/{estudanteId}")
+    public ResponseEntity<?> buscarNotaEstudante(
+            @PathVariable UUID listaId,
+            @PathVariable UUID estudanteId) {
+        try {
+            var nota = notaListaService.buscarNotaEstudante(listaId, estudanteId);
+            return ResponseEntity.ok(nota);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/lista/{listaId}")
+    public ResponseEntity<?> buscarNotasPorLista(@PathVariable UUID listaId) {
+        try {
+            var notas = notaListaService.buscarNotasPorLista(listaId);
+            return ResponseEntity.ok(notas);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 }

@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -26,6 +27,8 @@ public class EventoService {
     private final ListaRepository listaRepository;
     @Autowired
     private EventoMapper eventoMapper;
+    @Autowired
+    private NotaListaService notaListaService;
 
     public EventoService(EventoRepository eventoRepository,
                          MateriaRepositores materiaRepository,
@@ -344,10 +347,98 @@ public class EventoService {
         listaEvento.setEvento(evento);
 
         ListaEvento salvo = listaEventoRepository.save(listaEvento);
+        sincronizarNotasListaParaEvento(lista, evento);
         return convertToListaEventoResponse(salvo);
     }
+    @Transactional
+    public void sincronizarNotasListaParaEvento(Lista lista, Evento evento) {
+        // Busca todos os estudantes da lista que também estão no evento
+        List<Estudante> estudantesDaLista = lista.getEstudantes();
 
+        for (Estudante estudante : estudantesDaLista) {
+            try {
+                // Busca a nota do estudante na lista
+                Optional<ListaEstudanteNota> notaListaOpt = notaListaService.buscarNotaEstudanteOptional(lista.getId(), estudante.getId());
 
+                if (notaListaOpt.isPresent()) {
+                    ListaEstudanteNota notaLista = notaListaOpt.get();
+
+                    // Busca ou cria a NotaEvento para este estudante
+                    NotaEvento notaEvento = notaEventoRepository.findByEstudanteAndEvento(estudante, evento)
+                            .orElseGet(() -> {
+                                NotaEvento novaNotaEvento = new NotaEvento();
+                                novaNotaEvento.setEstudante(estudante);
+                                novaNotaEvento.setEvento(evento);
+                                novaNotaEvento.setProfessor(evento.getProfessor());
+                                novaNotaEvento.setStatusEntrega(NotaEvento.StatusEntrega.ENTREGUE);
+                                return novaNotaEvento;
+                            });
+
+                    // Converte a nota da lista para a nota do evento
+                    // Se a nota da lista é 9.2 (92%) e a nota máxima do evento é 10, então: 9.2
+                    // Se a nota máxima do evento é diferente, fazemos a proporção
+                    Double notaConvertida = converterNotaListaParaEvento(
+                            notaLista.getNota(),
+                            evento.getNotaMaxima()
+                    );
+
+                    notaEvento.setNota(notaConvertida);
+                    notaEvento.setObservacao("Nota sincronizada automaticamente da lista: " + lista.getTitulo());
+
+                    notaEventoRepository.save(notaEvento);
+                }
+            } catch (Exception e) {
+                System.err.println("Erro ao sincronizar nota do estudante " + estudante.getId() + ": " + e.getMessage());
+            }
+        }
+    }
+    private Double converterNotaListaParaEvento(BigDecimal notaLista, Double notaMaximaEvento) {
+        if (notaLista == null) {
+            return null;
+        }
+
+        // Converte BigDecimal para double
+        double notaListaDouble = notaLista.doubleValue();
+
+        // Se a nota máxima do evento é 10, retorna direto
+        if (notaMaximaEvento == 10.0) {
+            return notaListaDouble;
+        }
+
+        // Faz a proporção: (notaLista / 10) * notaMaximaEvento
+        return (notaListaDouble / 10.0) * notaMaximaEvento;
+    }
+
+    // Versão alternativa se estiver usando Double na ListaEstudanteNota:
+    private Double converterNotaListaParaEvento(Double notaLista, Double notaMaximaEvento) {
+        if (notaLista == null) {
+            return null;
+        }
+
+        // Se a nota máxima do evento é 10, retorna direto
+        if (notaMaximaEvento == 10.0) {
+            return notaLista;
+        }
+
+        // Faz a proporção: (notaLista / 10) * notaMaximaEvento
+        return (notaLista / 10.0) * notaMaximaEvento;
+    }
+    /**
+     * Força a sincronização das notas de uma lista já associada a um evento
+     */
+    @Transactional
+    public void sincronizarNotasListaEvento(UUID eventoId, UUID listaId) {
+        Evento evento = findEventoByIdOrThrow(eventoId);
+        Lista lista = findListaByIdOrThrow(listaId);
+
+        // Verifica se a lista está associada ao evento
+        boolean listaAssociada = listaEventoRepository.existsByListaAndEvento(lista, evento);
+        if (!listaAssociada) {
+            throw new IllegalStateException("Lista não está associada a este evento");
+        }
+
+        sincronizarNotasListaParaEvento(lista, evento);
+    }
     @Transactional
     public void removerListaDoEvento(UUID eventoId, UUID listaId) {
         Evento evento = findEventoByIdOrThrow(eventoId);
