@@ -38,7 +38,7 @@ public class Account implements UserDetails {
     private Estudante estudanteProfile;
     @OneToOne
     @JoinColumn(name = "instituicao_id")
-    private Escola instituicaoProfile;
+    private Instituicao instituicaoProfile;
     @OneToOne
     @JoinColumn(name = "pais_id")
     private Pais paisProfile;

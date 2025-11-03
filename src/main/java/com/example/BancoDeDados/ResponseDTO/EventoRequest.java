@@ -12,6 +12,6 @@ public class EventoRequest {
     private String descricao;
     private Double notaMaxima;
     private LocalDateTime data;
-    private UUID materiaId;
+    private UUID disciplinaId;
     private List<String> arquivos;
 }

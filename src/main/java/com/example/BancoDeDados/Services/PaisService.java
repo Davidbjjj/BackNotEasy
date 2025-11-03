@@ -1,6 +1,5 @@
 package com.example.BancoDeDados.Services;
 
-import com.example.BancoDeDados.Model.Escola;
 import com.example.BancoDeDados.Model.Pais;
 import com.example.BancoDeDados.Repositores.PaisRepositores;
 import jakarta.transaction.Transactional;

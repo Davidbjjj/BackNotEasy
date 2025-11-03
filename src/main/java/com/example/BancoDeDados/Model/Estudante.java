@@ -46,7 +46,7 @@ public class Estudante implements UserDetails {
             joinColumns = @JoinColumn(name = "estudante_id"),
             inverseJoinColumns = @JoinColumn(name = "materia_id")
     )
-    private List<Materia> materias = new ArrayList<>();
+    private List<Disciplina> disciplina = new ArrayList<>();
     @OneToMany(mappedBy = "estudante", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RespostaEstudantes> respostas;
 

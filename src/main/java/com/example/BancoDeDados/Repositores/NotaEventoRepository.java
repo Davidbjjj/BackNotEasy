@@ -2,7 +2,6 @@ package com.example.BancoDeDados.Repositores;
 
 import com.example.BancoDeDados.Model.Estudante;
 import com.example.BancoDeDados.Model.Evento;
-import com.example.BancoDeDados.Model.Materia;
 import com.example.BancoDeDados.Model.NotaEvento;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

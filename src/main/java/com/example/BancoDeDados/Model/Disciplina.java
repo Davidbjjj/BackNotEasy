@@ -1,11 +1,10 @@
 package com.example.BancoDeDados.Model;
 
+import com.example.BancoDeDados.ResponseDTO.MateriaResponseDTO;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 @Getter
 @Setter
@@ -25,8 +24,8 @@ public class Disciplina {
     private String nome;
 
     @ManyToOne
-    @JoinColumn(name = "escola_id", nullable = false)
-    private Escola escola;
+    @JoinColumn(name = "instituicao_id", nullable = false)
+    private Instituicao instituicao;
 
     @ManyToOne
     @JoinColumn(name = "professor_id", nullable = false)
@@ -34,9 +33,21 @@ public class Disciplina {
 
     @ManyToMany
     @JoinTable(
-        name = "disciplina_alunos",
+        name = "disciplina_estudantes",
         joinColumns = @JoinColumn(name = "disciplina_id"),
-        inverseJoinColumns = @JoinColumn(name = "aluno_id")
+        inverseJoinColumns = @JoinColumn(name = "estudante_id")
     )
-    private Set<Estudante> alunos = new HashSet<>();
+    private Set<Estudante> estudantes= new HashSet<>();
+
+    @ManyToMany(mappedBy = "disciplina")
+    private List<Estudante> estudante = new ArrayList<>();
+    @OneToMany(mappedBy = "disciplina", cascade = CascadeType.ALL)
+    private List<Evento> eventos = new ArrayList<>();
+
+
+    public Disciplina(MateriaResponseDTO dto, Professor professor, Instituicao instituicao) {
+        this.nome = dto.getNome();
+        this.professor = professor;
+        this.instituicao = instituicao;
+    }
 }

@@ -26,8 +26,8 @@ public class DisciplinaController {
                 disciplina.getId(),
                 disciplina.getNome(),
                 disciplina.getProfessor().getNome(),
-                disciplina.getEscola().getNome(),
-                disciplina.getAlunos().stream().map(a -> a.getNome()).toList()
+                disciplina.getInstituicao().getNome(),
+                disciplina.getEstudante().stream().map(a -> a.getNome()).toList()
         ));
     }
 
@@ -42,9 +42,9 @@ public class DisciplinaController {
                 .map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/escola/{nomeEscola}")
-    public ResponseEntity<List<DisciplinaResponseDTO>> buscarPorEscola(@PathVariable String nomeEscola) {
-        return ResponseEntity.ok(disciplinaService.buscarPorEscola(nomeEscola));
+    @GetMapping("/instituicao/{nomeEscola}")
+    public ResponseEntity<List<DisciplinaResponseDTO>> buscarPorEscola(@PathVariable String nomeInstituicao) {
+        return ResponseEntity.ok(disciplinaService.buscarPorInstituicao(nomeInstituicao));
     }
 
     @DeleteMapping("/{id}")

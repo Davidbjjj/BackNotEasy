@@ -20,7 +20,7 @@ public class EventoService {
 
     private NotaRepository notaRepository;
     private final EventoRepository eventoRepository;
-    private final MateriaRepositores materiaRepository;
+    private final DisciplinaRepository disciplinaRepository;
     private final EstudanteRepositores estudanteRepository;
     private final NotaEventoRepository notaEventoRepository;
     private final ListaEventoRepository listaEventoRepository;
@@ -31,13 +31,13 @@ public class EventoService {
     private NotaListaService notaListaService;
 
     public EventoService(EventoRepository eventoRepository,
-                         MateriaRepositores materiaRepository,
+                         DisciplinaRepository disciplinaRepository,
                          EstudanteRepositores estudanteRepository,
                          NotaEventoRepository notaEventoRepository,
                          ListaEventoRepository listaEventoRepository,
                          ListaRepository listaRepository) {
         this.eventoRepository = eventoRepository;
-        this.materiaRepository = materiaRepository;
+        this.disciplinaRepository = disciplinaRepository;
         this.estudanteRepository = estudanteRepository;
         this.notaEventoRepository = notaEventoRepository;
         this.listaEventoRepository=listaEventoRepository;
@@ -46,27 +46,27 @@ public class EventoService {
 
     @Transactional
     public EventoComNotasResponse criarEvento(EventoRequest dto) {
-        Materia materia = findMateriaByIdOrThrow(dto.getMateriaId());
-        Professor professor = materia.getProfessor();
+        Disciplina disciplina = findDisciplinaByIdOrThrow(dto.getDisciplinaId());
+        Professor professor = disciplina.getProfessor();
         if (professor == null) {
-            throw new IllegalStateException("Materia sem professor associado");
+            throw new IllegalStateException("Disciplina sem professor associado");
         }
 
-        Evento evento = eventoMapper.toEntity(dto, materia, professor);
+        Evento evento = eventoMapper.toEntity(dto, disciplina, professor);
         Evento eventoSalvo = eventoRepository.save(evento);
 
-        associarTodosEstudantesDaMateria(eventoSalvo.getId(), materia);
+        associarTodosEstudantesDaDisciplina(eventoSalvo.getId(), disciplina);
 
         return eventoMapper.toResponse(eventoSalvo);
     }
     @Transactional
-    public void associarTodosEstudantesDaMateria(UUID eventoId, Materia materia) {
+    public void associarTodosEstudantesDaDisciplina(UUID eventoId, Disciplina disciplina) {
         Evento evento = findEventoByIdOrThrow(eventoId);
 
-        List<Estudante> estudantesDaMateria = materia.getEstudantes();
+        List<Estudante> estudantesDaDisciplina = disciplina.getEstudante();
 
-        if (estudantesDaMateria != null && !estudantesDaMateria.isEmpty()) {
-            for (Estudante estudante : estudantesDaMateria) {
+        if (estudantesDaDisciplina != null && !estudantesDaDisciplina.isEmpty()) {
+            for (Estudante estudante : estudantesDaDisciplina) {
                 try {
                     boolean jaVinculado = evento.getNotasEstudante().stream()
                             .anyMatch(ne -> ne.getEstudante() != null &&
@@ -96,7 +96,7 @@ public class EventoService {
     @Transactional
     public Evento atualizarEvento(UUID eventoId, EventoComNotasResponse dto) {
         Evento evento = findEventoByIdOrThrow(eventoId);
-        Materia materia = findMateriaByIdOrThrow(dto.getId());
+        Disciplina disciplina = findDisciplinaByIdOrThrow(dto.getId());
 
         evento.setTitulo(dto.getTitulo());
         evento.setDescricao(dto.getDescricao());
@@ -112,7 +112,7 @@ public class EventoService {
                         .collect(Collectors.toList())
         );
 
-        evento.setMateria(materia);
+        evento.setDisciplina(disciplina);
 
         return eventoRepository.save(evento);
     }
@@ -220,8 +220,8 @@ public class EventoService {
     }
 
     @Transactional(readOnly = true)
-    public List<Evento> listarPorMateria(UUID materiaId) {
-        return eventoRepository.findByMateriaId(materiaId);
+    public List<Evento> listarPorDisciplina(UUID disciplinaId) {
+        return eventoRepository.findByDisciplinaId(disciplinaId);
     }
 
     @Transactional(readOnly = true)
@@ -232,11 +232,11 @@ public class EventoService {
     }
 
     @Transactional(readOnly = true)
-    public List<Evento> buscarEventosPorDataEMateria(LocalDate data, UUID materiaId) {
-        return eventoRepository.findByDataBetweenAndMateria_Id(
+    public List<Evento> buscarEventosPorDataEDisciplina(LocalDate data, UUID disciplinaId) {
+        return eventoRepository.findByDataBetweenAndDisciplina_Id(
                 data.atStartOfDay(),
                 data.plusDays(1).atStartOfDay(),
-                materiaId
+                disciplinaId
         );
     }
 
@@ -259,13 +259,13 @@ public class EventoService {
        UTIL / CONVERSÕES
        =========================== */
 
-    private Evento buildEventoFromDTO(EventoRequest dto, Materia materia, Professor professor) {
+    private Evento buildEventoFromDTO(EventoRequest dto, Disciplina disciplina, Professor professor) {
         Evento evento = new Evento();
         evento.setTitulo(dto.getTitulo());
         evento.setDescricao(dto.getDescricao());
         evento.setNotaMaxima(dto.getNotaMaxima());
         evento.setData(dto.getData());
-        evento.setMateria(materia);
+        evento.setDisciplina(disciplina);
         evento.setProfessor(professor);
 
         if (dto.getArquivos() != null) {
@@ -305,8 +305,8 @@ public class EventoService {
         response.setDescricao(evento.getDescricao());
         response.setNotaMaxima(evento.getNotaMaxima());
         response.setData(evento.getData());
-        response.setMateriaId(evento.getMateria().getId());
-        response.setMateriaNome(evento.getMateria().getNome());
+        response.setDisciplinaId(evento.getDisciplina().getId());
+        response.setDisciplinaNome(evento.getDisciplina().getNome());
         response.setNotasEstudantes(new ArrayList<>()); // Inicialmente vazio
 
         return response;
@@ -320,9 +320,9 @@ public class EventoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado"));
     }
 
-    private Materia findMateriaByIdOrThrow(UUID materiaId) {
-        return materiaRepository.findById(materiaId)
-                .orElseThrow(() -> new ResourceNotFoundException("Materia não encontrada"));
+    private Disciplina findDisciplinaByIdOrThrow(UUID disciplinaId) {
+        return disciplinaRepository.findById(disciplinaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Disciplina não encontrada"));
     }
 
     private Estudante findEstudanteByIdOrThrow(UUID estudanteId) {

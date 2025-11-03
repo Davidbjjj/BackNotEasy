@@ -12,7 +12,7 @@ public class EventoComNotasResponse {
     private String descricao;
     private Double notaMaxima;
     private LocalDateTime data;
-    private String materiaNome;
-    private UUID materiaId;
+    private String disciplinaNome;
+    private UUID disciplinaId;
     private List<NotaEstudanteResponse> notasEstudantes;
 }

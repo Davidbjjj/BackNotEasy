@@ -12,10 +12,10 @@ import java.util.UUID;
 public interface EventoRepository extends JpaRepository<Evento, UUID> {
 
     // Buscar eventos de uma disciplina por faixa de data
-    List<Evento> findByDataBetweenAndMateria_Id(LocalDateTime inicio, LocalDateTime fim, UUID disciplinaId);
+    List<Evento> findByDataBetweenAndDisciplina_Id(LocalDateTime inicio, LocalDateTime fim, UUID disciplinaId);
 
     // Buscar eventos de uma disciplina pelo id
-    List<Evento> findByMateriaId(UUID disciplinaId);
+    List<Evento> findByDisciplinaId(UUID disciplinaId);
 
     // Buscar eventos em que um aluno está vinculado
     List<Evento> findByNotasEstudante_Estudante_Id(UUID estudanteId);
