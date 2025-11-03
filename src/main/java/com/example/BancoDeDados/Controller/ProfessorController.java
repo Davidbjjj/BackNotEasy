@@ -1,9 +1,11 @@
 package com.example.BancoDeDados.Controller;
 
 import com.example.BancoDeDados.Model.Account;
+import com.example.BancoDeDados.Model.Instituicao;
 import com.example.BancoDeDados.Model.Professor;
 import com.example.BancoDeDados.Model.Role;
 import com.example.BancoDeDados.Repositores.AccountRepository;
+import com.example.BancoDeDados.Repositores.InstituicaoRepository;
 import com.example.BancoDeDados.Repositores.ProfessorRepositores;
 import com.example.BancoDeDados.ResponseDTO.PLoginResponseDTO;
 import com.example.BancoDeDados.ResponseDTO.ProfessorDTO;
@@ -45,20 +47,32 @@ public class ProfessorController {
 
     @Autowired
     private AccountRepository accountRepository;
+    @Autowired
+    private InstituicaoRepository instituicaoRepository;
 
     public ProfessorController(TokenService tokenService, AuthenticationManager authenticationManager,
-                               PasswordEncoder passwordEncoder, ProfessorRepositores professorRepositores) {
+                               PasswordEncoder passwordEncoder, ProfessorRepositores professorRepositores,InstituicaoRepository instituicaoRepository) {
         this.tokenService = tokenService;
         this.authenticationManager = authenticationManager;
         this.passwordEncoder = passwordEncoder;
         this.professorRepositores = professorRepositores;
+        this.instituicaoRepository=instituicaoRepository;
     }
 
     @PostMapping("/registrar")
     public ResponseEntity<?> registrar(@RequestBody @Valid ProfessorResponseDTO professorDTO) {
         try {
-          // Cria o professor
-            Professor novoProfessor = new Professor(professorDTO);
+            // Buscar a instituição pelo ID
+            Instituicao instituicao = instituicaoRepository.findById(professorDTO.instituicaoId())
+                    .orElseThrow(() -> new IllegalArgumentException("Instituição não encontrada"));
+
+            // Verificar se o email do professor está na lista de emails permitidos
+            if (!instituicao.getEmailsPermitidos().contains(professorDTO.email())) {
+                return ResponseEntity.badRequest().body("Email não permitido para esta instituição");
+            }
+
+            // Cria o professor com a instituição - AGORA FUNCIONA
+            Professor novoProfessor = new Professor(professorDTO, instituicao);
             professorService.criar(novoProfessor);
 
             // Cria o Account vinculado
@@ -84,7 +98,6 @@ public class ProfessorController {
                             novoProfessor.getId(),
                             token,
                             novoProfessor.getNome()
-
                     )
             );
         } catch (IllegalArgumentException e) {

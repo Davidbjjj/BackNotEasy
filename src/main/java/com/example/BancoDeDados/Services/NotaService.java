@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -25,7 +26,7 @@ public class NotaService {
     }
 
 
-    public List<Map<String, Object>> getPorDisciplina(Long id) {
+    public List<Map<String, Object>> getPorDisciplina(UUID id) {
         List<Object[]> dados = notaRepository.filtrarPorDisciplina(id);
         return dados.stream()
                 .map(l -> Map.of("aluno", l[0], "nota", l[1]))

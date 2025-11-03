@@ -34,22 +34,25 @@ public class DisciplinaService {
 
     @Transactional
     public Disciplina criar(DisciplinaRequestDTO dto) {
-        Instituicao instituicao = instituicaoRepository.findById(dto.instituicaoId())
-                .orElseThrow(() -> new IllegalArgumentException("Instituicao não encontrada"));
+        try {
+            Instituicao instituicao = instituicaoRepository.findById(dto.instituicaoId())
+                    .orElseThrow(() -> new IllegalArgumentException("Instituição não encontrada"));
 
-        Professor professor = professorRepository.findByEmail(dto.emailProfessor())
-                .orElseThrow(() -> new IllegalArgumentException("Professor não encontrado"));
+            // Use o novo método que já faz a verificação da instituição
+            Professor professor = professorRepository.findByEmailAndInstituicaoId(dto.emailProfessor(), dto.instituicaoId())
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "Professor não encontrado ou não pertence à instituição informada"));
 
-        if (!professor.getInstituicao().equals(instituicao)) {
-            throw new IllegalArgumentException("Professor não pertence à instituicao informada");
+            Disciplina disciplina = new Disciplina();
+            disciplina.setNome(dto.nome());
+            disciplina.setInstituicao(instituicao);
+            disciplina.setProfessor(professor);
+
+            return disciplinaRepository.save(disciplina);
+
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Erro ao criar disciplina: " + e.getMessage());
         }
-
-        Disciplina disciplina = new Disciplina();
-        disciplina.setNome(dto.nome());
-        disciplina.setInstituicao(instituicao);
-        disciplina.setProfessor(professor);
-
-        return disciplinaRepository.save(disciplina);
     }
 
     public List<DisciplinaResponseDTO> listar() {

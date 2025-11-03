@@ -5,19 +5,20 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.UUID;
-
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class ProfessorDTO {
     private UUID id;
     private String nome;
     private String materia1;
     private String materia2;
-    private String instituicao;
+    private UUID instituicaoId; // Mude o nome para refletir que é o ID
+    private String instituicaoNome; // Adicione este campo para o nome
     private String email;
     private Date dataNascimento;
-    private String escola; // Apenas o nome da escola, não o objeto completo
 
     // Construtor a partir da entidade Professor
     public ProfessorDTO(Professor professor) {
@@ -25,33 +26,9 @@ public class ProfessorDTO {
         this.nome = professor.getNome();
         this.materia1 = professor.getMateria1();
         this.materia2 = professor.getMateria2();
-        this.instituicao = professor.getInstituicao();
+        this.instituicaoId = professor.getInstituicao() != null ? professor.getInstituicao().getId() : null;
+        this.instituicaoNome = professor.getInstituicao() != null ? professor.getInstituicao().getNome() : null;
         this.email = professor.getEmail();
         this.dataNascimento = professor.getDataNascimento();
-
     }
-
-    // Getters e Setters
-    public UUID getId() { return id; }
-    public void setId(UUID id) { this.id = id; }
-
-    public String getNome() { return nome; }
-    public void setNome(String nome) { this.nome = nome; }
-
-    public String getMateria1() { return materia1; }
-    public void setMateria1(String materia1) { this.materia1 = materia1; }
-
-    public String getMateria2() { return materia2; }
-    public void setMateria2(String materia2) { this.materia2 = materia2; }
-
-    public String getInstituicao() { return instituicao; }
-    public void setInstituicao(String instituicao) { this.instituicao = instituicao; }
-
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-
-    public Date getDataNascimento() { return dataNascimento; }
-    public void setDataNascimento(Date dataNascimento) { this.dataNascimento = dataNascimento; }
-
-
 }

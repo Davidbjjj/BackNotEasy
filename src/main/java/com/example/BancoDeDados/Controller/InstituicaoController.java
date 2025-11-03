@@ -5,10 +5,8 @@ import com.example.BancoDeDados.Model.Account;
 import com.example.BancoDeDados.Model.Instituicao;
 import com.example.BancoDeDados.Model.Role;
 import com.example.BancoDeDados.Repositores.AccountRepository;
-import com.example.BancoDeDados.ResponseDTO.EscLoginResponseDTO;
-import com.example.BancoDeDados.ResponseDTO.InstituicaoRequest;
-import com.example.BancoDeDados.ResponseDTO.InstituicaoResponse;
-import com.example.BancoDeDados.ResponseDTO.InstituicaoResponseDTO;
+import com.example.BancoDeDados.Repositores.InstituicaoRepository;
+import com.example.BancoDeDados.ResponseDTO.*;
 import com.example.BancoDeDados.Security.TokenService;
 import com.example.BancoDeDados.Services.EmailService;
 import com.example.BancoDeDados.Services.InstituicaoService;
@@ -24,9 +22,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/instituicoes")
+@RequestMapping("/instituicao")
 public class InstituicaoController {
 
     private final InstituicaoService instituicaoService;
@@ -34,28 +33,33 @@ public class InstituicaoController {
     private final TokenService tokenService;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
+    private final InstituicaoRepository instituicaoRepository;
 
     public InstituicaoController(InstituicaoService instituicaoService,
                                  AccountRepository accountRepository,
                                  TokenService tokenService,
                                  EmailService emailService,
-                                 PasswordEncoder passwordEncoder) {
+                                 PasswordEncoder passwordEncoder,
+                                 InstituicaoRepository instituicaoRepository) {
         this.instituicaoService = instituicaoService;
         this.accountRepository = accountRepository;
         this.tokenService = tokenService;
         this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
+        this.instituicaoRepository=instituicaoRepository;
     }
 
     @PostMapping("/registrar")
     public ResponseEntity<?> registrar(@RequestBody @Valid InstituicaoRequest instituicaoRequest) {
         try {
             Instituicao instituicao=new Instituicao(instituicaoRequest);
+            instituicao.setSenha(passwordEncoder.encode(instituicaoRequest.getSenha()));
 
+            instituicao = instituicaoRepository.save(instituicao);
 
             Account account = new Account();
             account.setEmail(instituicao.getEmail());
-            account.setSenha(passwordEncoder.encode(instituicaoRequest.getSenha()));
+            account.setSenha(instituicao.getSenha());
             account.setRole(Role.INSTITUICAO);
             account.setInstituicaoProfile(instituicao);
             accountRepository.save(account);
@@ -116,5 +120,97 @@ public class InstituicaoController {
         tokenService.revokeToken(cleanedToken);
 
         return ResponseEntity.ok("Logout realizado com sucesso");
+    }@PostMapping("/{instituicaoId}/emails-permitidos")
+    public ResponseEntity<?> adicionarEmailsPermitidos(
+            @PathVariable UUID instituicaoId,
+            @RequestBody EmailsPermitidosRequest request) {
+
+        try {
+            // Buscar a instituição pelo ID
+            Instituicao instituicao = instituicaoRepository.findById(instituicaoId)
+                    .orElseThrow(() -> new IllegalArgumentException("Instituição não encontrada"));
+
+            // Validar se a lista de emails não é nula ou vazia
+            if (request.getEmails() == null || request.getEmails().isEmpty()) {
+                return ResponseEntity.badRequest().body("A lista de emails não pode estar vazia");
+            }
+
+            // Validar formato dos emails
+            for (String email : request.getEmails()) {
+                if (!isValidEmail(email)) {
+                    return ResponseEntity.badRequest().body("Email inválido: " + email);
+                }
+            }
+
+            // Adicionar os novos emails à lista existente
+            List<String> emailsExistentes = instituicao.getEmailsPermitidos();
+            emailsExistentes.addAll(request.getEmails());
+
+            // Remover duplicatas se necessário
+            List<String> emailsUnicos = emailsExistentes.stream()
+                    .distinct()
+                    .collect(Collectors.toList());
+
+            instituicao.setEmailsPermitidos(emailsUnicos);
+
+            // Salvar a instituição atualizada
+            instituicaoRepository.save(instituicao);
+
+            return ResponseEntity.ok("Emails permitidos adicionados com sucesso");
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro ao adicionar emails permitidos: " + e.getMessage());
+        }
     }
+
+    // Método auxiliar para validar email
+    private boolean isValidEmail(String email) {
+        String emailRegex = "^[A-Za-z0-9+_.-]+@(.+)$";
+        return email != null && email.matches(emailRegex);
+    }@DeleteMapping("/{instituicaoId}/emails-permitidos")
+    public ResponseEntity<?> removerEmailPermitido(
+            @PathVariable UUID instituicaoId,
+            @RequestParam String email) {
+
+        try {
+            Instituicao instituicao = instituicaoRepository.findById(instituicaoId)
+                    .orElseThrow(() -> new IllegalArgumentException("Instituição não encontrada"));
+
+            List<String> emailsPermitidos = instituicao.getEmailsPermitidos();
+
+            if (emailsPermitidos.remove(email)) {
+                instituicao.setEmailsPermitidos(emailsPermitidos);
+                instituicaoRepository.save(instituicao);
+                return ResponseEntity.ok("Email removido com sucesso");
+            } else {
+                return ResponseEntity.badRequest().body("Email não encontrado na lista de permitidos");
+            }
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro ao remover email permitido: " + e.getMessage());
+        }
+    }
+    @GetMapping("/{instituicaoId}/emails-permitidos")
+    public ResponseEntity<?> listarEmailsPermitidos(@PathVariable UUID instituicaoId) {
+        try {
+            Instituicao instituicao = instituicaoRepository.findById(instituicaoId)
+                    .orElseThrow(() -> new IllegalArgumentException("Instituição não encontrada"));
+
+            return ResponseEntity.ok(instituicao.getEmailsPermitidos());
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro ao buscar emails permitidos: " + e.getMessage());
+        }
+    }
+
+
 }

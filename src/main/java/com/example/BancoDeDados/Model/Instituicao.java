@@ -14,12 +14,13 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.*;
 
-@Entity
+
 @AllArgsConstructor
 @NoArgsConstructor
 @Data
 @EqualsAndHashCode(of = "id")
-@Table(name = "instituicoes")
+@Entity(name = "instituicao")
+@Table(name = "instituicao")
 public class Instituicao implements UserDetails {
     @Id
     @GeneratedValue
