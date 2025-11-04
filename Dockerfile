@@ -4,9 +4,14 @@ COPY pom.xml .
 COPY src ./src
 RUN mvn clean package -DskipTests
 
-FROM openjdk:17-jdk-slim
-COPY target/BancoDeDados-0.0.1-SNAPSHOT.jar app.jar
+# Use uma imagem OpenJDK mais específica e compatível
+FROM eclipse-temurin:17-jre-jammy
 
-# Define variáveis de ambiente recomendadas para o Render
+WORKDIR /app
+COPY --from=builder /app/target/BancoDeDados-0.0.1-SNAPSHOT.jar app.jar
+
+# Define variáveis de ambiente para otimização JVM
+ENV JAVA_OPTS="-Xmx512m -Xms256m"
+
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "/app.jar"]
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
