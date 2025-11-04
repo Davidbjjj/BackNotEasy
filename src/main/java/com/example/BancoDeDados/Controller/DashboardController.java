@@ -74,7 +74,7 @@ public class DashboardController {
 
 
     @GetMapping("/filtro-disciplina/{id}")
-    public List<Map<String, Object>> filtro(@PathVariable Long id) {
+    public List<Map<String, Object>> filtro(@PathVariable UUID id) {
         return notaService.getPorDisciplina(id);
     }
 

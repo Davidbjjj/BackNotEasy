@@ -91,8 +91,11 @@ public class RespostaEstudantesService {
         respostaEstudantesRepository.save(resposta);
 
 
-        notaListaService.atualizarNotaAposResposta(questao.getLista().getId(), estudante.getId());
-        sincronizarComEventosAssociados(questao.getLista().getId(), estudante.getId());
+        respostaEstudantesRepository.save(resposta);
+
+        // Agora temos o listaId diretamente do DTO
+        notaListaService.atualizarNotaAposResposta(enviarRespostaDTO.listaId(), estudante.getId());
+        sincronizarComEventosAssociados(enviarRespostaDTO.listaId(), estudante.getId());;
     }
     private void sincronizarComEventosAssociados(UUID listaId, UUID estudanteId) {
         try {

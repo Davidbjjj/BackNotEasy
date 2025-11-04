@@ -1,20 +1,19 @@
 package com.example.BancoDeDados.Controller;
 
+import com.example.BancoDeDados.Model.Disciplina;
 import com.example.BancoDeDados.Model.Estudante;
 import com.example.BancoDeDados.Model.Lista;
 import com.example.BancoDeDados.Model.Questao;
 import com.example.BancoDeDados.Repositores.ListaRepository;
 import com.example.BancoDeDados.Repositores.QuestaoRepositores;
-import com.example.BancoDeDados.ResponseDTO.ListaAddResponseDTO;
-import com.example.BancoDeDados.ResponseDTO.ListaResponseDTO;
-import com.example.BancoDeDados.ResponseDTO.QuestaoRequestDTO;
-import com.example.BancoDeDados.ResponseDTO.QuestaoResponseDTO;
+import com.example.BancoDeDados.ResponseDTO.*;
 import com.example.BancoDeDados.Services.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -52,6 +51,22 @@ public class ListaController {
     @GetMapping
     public List<ListaResponseDTO> listarTodasListas() {
         return listaService.buscarTodasListas();
+    }
+
+    // Adicione este método no ListaController.java
+
+    // No ListaController.java - Método corrigido
+    @GetMapping("/estudante/{estudanteId}/questoes")
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<QuestaoResponseDTO>> buscarQuestoesPorEstudante(@PathVariable UUID estudanteId) {
+        try {
+            List<QuestaoResponseDTO> questoes = listaService.buscarQuestoesPorEstudante(estudanteId);
+            return ResponseEntity.ok(questoes);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(null);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     @PostMapping("/salvar-questoes-docs/{listaId}")
@@ -92,14 +107,32 @@ public class ListaController {
     @GetMapping("/{listaId}/questoes")
     @Transactional(readOnly = true)
     public List<QuestaoResponseDTO> listarQuestoes(@PathVariable UUID listaId) {
-        Lista lista = listaRepository.findById(listaId)
+        // Use o método com JOIN FETCH para carregar as questões
+        Lista lista = listaRepository.findByIdWithQuestoes(listaId)
                 .orElseThrow(() -> new RuntimeException("Lista não encontrada"));
 
+        System.out.println("DEBUG - Lista ID: " + listaId);
+        System.out.println("DEBUG - Número de questões encontradas: " + (lista.getQuestoes() != null ? lista.getQuestoes().size() : 0));
+
+        if (lista.getQuestoes() == null || lista.getQuestoes().isEmpty()) {
+            System.out.println("DEBUG - Lista de questões está vazia ou nula");
+            return new ArrayList<>();
+        }
+
         List<QuestaoResponseDTO> questoesDTO = lista.getQuestoes().stream()
-                .map(questao -> new QuestaoResponseDTO(questao.getId(), questao.getCabecalho(),
-                        questao.getEnunciado(), questao.getAlternativas(), questao.getGabarito()))
+                .map(questao -> {
+                    System.out.println("DEBUG - Processando questão ID: " + questao.getId());
+                    return new QuestaoResponseDTO(
+                            questao.getId(),
+                            questao.getCabecalho(),
+                            questao.getEnunciado(),
+                            questao.getAlternativas(),
+                            questao.getGabarito()
+                    );
+                })
                 .collect(toList());
 
+        System.out.println("DEBUG - Total de DTOs criados: " + questoesDTO.size());
         return questoesDTO;
     }
 
@@ -196,6 +229,58 @@ public class ListaController {
             return ResponseEntity.ok(notas);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+    @GetMapping("/estudante/{estudanteId}")
+    public List<ListaResponseDTO> buscarListasPorEstudante(@PathVariable UUID estudanteId) {
+        return listaService.buscarListasPorEstudante(estudanteId);
+    }
+    // NOVO ENDPOINT: Criar lista associada a uma disciplina
+    @PostMapping("/disciplina/{disciplinaId}")
+    public ResponseEntity<ListaResponseDTO> criarListaComDisciplina(
+            @RequestParam String titulo,
+            @RequestParam UUID professorId,
+            @PathVariable UUID disciplinaId) {
+        try {
+            ListaResponseDTO listaCriada = listaService.criarListaComDisciplina(titulo, professorId, disciplinaId);
+            return ResponseEntity.ok(listaCriada);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(null);
+        }
+    }
+
+    // NOVO ENDPOINT: Associar lista existente a uma disciplina
+    @PostMapping("/{listaId}/disciplina/{disciplinaId}")
+    public ResponseEntity<ListaResponseDTO> associarListaADisciplina(
+            @PathVariable UUID listaId,
+            @PathVariable UUID disciplinaId) {
+        try {
+            ListaResponseDTO listaAtualizada = listaService.associarListaExistenteADisciplina(listaId, disciplinaId);
+            return ResponseEntity.ok(listaAtualizada);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(null);
+        }
+    }
+
+    // NOVO ENDPOINT: Buscar listas por disciplina
+    @GetMapping("/disciplina/{disciplinaId}")
+    public ResponseEntity<List<ListaResponseDTO>> buscarListasPorDisciplina(@PathVariable UUID disciplinaId) {
+        try {
+            List<ListaResponseDTO> listas = listaService.buscarListasPorDisciplina(disciplinaId);
+            return ResponseEntity.ok(listas);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    // NOVO ENDPOINT: Buscar disciplinas do professor
+    @GetMapping("/professor/{professorId}/disciplinas")
+    public ResponseEntity<List<DisciplinaProfessorResponseDTO>> buscarDisciplinasPorProfessor(@PathVariable UUID professorId) {
+        try {
+            List<DisciplinaProfessorResponseDTO> disciplinas = listaService.buscarDisciplinasPorProfessor(professorId);
+            return ResponseEntity.ok(disciplinas);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
         }
     }
 }

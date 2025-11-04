@@ -42,8 +42,8 @@ public class Evento {
     private List<String> arquivos = new ArrayList<>();
 
     @ManyToOne
-    @JoinColumn(name = "materia_id")
-    private Materia materia;
+    @JoinColumn(name = "disciplina_id")
+    private Disciplina disciplina;
 
     @ManyToOne
     @JoinColumn(name = "professor_id", referencedColumnName = "id")

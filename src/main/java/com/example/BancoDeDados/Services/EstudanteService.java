@@ -4,12 +4,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.example.BancoDeDados.Model.Instituicao;
+import com.example.BancoDeDados.Repositores.InstituicaoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.example.BancoDeDados.Model.Escola;
 import com.example.BancoDeDados.Model.Estudante;
-import com.example.BancoDeDados.Repositores.EscolaRespositores;
 import com.example.BancoDeDados.Repositores.EstudanteRepositores;
 
 @Service
@@ -18,11 +18,11 @@ public class EstudanteService {
     private EstudanteRepositores estudanteRepositores;
 
     @Autowired
-    private EscolaRespositores escolaRepositor;
+    private InstituicaoRepository instituicaoRepository;
 
     public Estudante criar(Estudante estudante) {
         String nomeInstituicao = estudante.getInstituicao();
-        Optional<Escola> instituicaoExistente = escolaRepositor.findByNome(nomeInstituicao);
+        Optional<Instituicao> instituicaoExistente = instituicaoRepository.findByNome(nomeInstituicao);
 
         if (!validarSenha(estudante.getSenha())) {
             throw new IllegalArgumentException(

@@ -89,9 +89,9 @@ public class EventoController {
         return service.buscarEventoPorId(eventoId);
     }
 
-    @GetMapping("/materia/{materiaId}")
-    public List<Evento> listarPorMateria(@PathVariable UUID materiaId) {
-        return service.listarPorMateria(materiaId);
+    @GetMapping("/disciplina/{disciplinaId}")
+    public List<Evento> listarPorDisciplina(@PathVariable UUID disciplinaId) {
+        return service.listarPorDisciplina(disciplinaId);
     }
 
     @GetMapping("/aluno/email/{alunoEmail}")
@@ -106,10 +106,10 @@ public class EventoController {
     }
 
     @GetMapping("/data")
-    public List<Evento> buscarEventosPorDataEMateria(
+    public List<Evento> buscarEventosPorDataEDisciplina(
             @RequestParam LocalDate data,
-            @RequestParam UUID materiaId) {
-        return service.buscarEventosPorDataEMateria(data, materiaId);
+            @RequestParam UUID disciplinaId) {
+        return service.buscarEventosPorDataEDisciplina(data, disciplinaId);
     }
 
     @GetMapping("/{eventoId}/alunos")

@@ -77,8 +77,8 @@ public class DashboardService {
 
     public Map<String, Object> getDesempenhoGeralPorPeriodo(LocalDateTime startDate,
                                 LocalDateTime endDate,
-                                UUID materiaId) {
-    List<NotaEvento> notas = notaEventoRepository.findByPeriodoAndMateria(startDate, endDate, materiaId);
+                                UUID disciplinaId) {
+    List<NotaEvento> notas = notaEventoRepository.findByPeriodoAndDisciplina(startDate, endDate, disciplinaId);
 
     int totalAvaliacoes = notas.size();
     long alunosAvaliados = notas.stream()
@@ -103,7 +103,7 @@ public class DashboardService {
     Map<String, Object> dashboard = new HashMap<>();
     dashboard.put("inicio", startDate);
     dashboard.put("fim", endDate);
-    dashboard.put("materiaId", materiaId);
+    dashboard.put("materiaId", disciplinaId);
     dashboard.put("totalAvaliacoes", totalAvaliacoes);
     dashboard.put("alunosAvaliados", alunosAvaliados);
     dashboard.put("mediaNotas", mediaNotas);

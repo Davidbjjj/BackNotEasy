@@ -1,24 +1,44 @@
 package com.example.BancoDeDados.Model;
 
+import com.example.BancoDeDados.ResponseDTO.InstituicaoRequest;
+import com.example.BancoDeDados.ResponseDTO.IntituicaoResponseDTO;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+
 import java.util.*;
 
-@Entity
-@Table(name = "instituicoes")
-public class Instituicao {
 
+@AllArgsConstructor
+@NoArgsConstructor
+@Data
+@EqualsAndHashCode(of = "id")
+@Entity(name = "instituicao")
+@Table(name = "instituicao")
+public class Instituicao implements UserDetails {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
+    @GeneratedValue
+    @Column(columnDefinition = "uuid", updatable = false, nullable = false)
     private UUID id;
 
     @Column(nullable = false)
     private String nome;
 
-    @Column(nullable = false, unique = true)
+    @Column(unique = true, nullable = false)
     private String email;
 
     @Column(nullable = false)
     private String senha;
+
+    @Column(nullable = false)
+    @DateTimeFormat(pattern = "yyyy-MM-dd")
+    private Date dataDeFundacao;
 
     @Column(nullable = false)
     private String endereco;
@@ -29,25 +49,49 @@ public class Instituicao {
     @ElementCollection(fetch = FetchType.EAGER)
     private List<String> emailsPermitidos = new ArrayList<>();
 
-    // Getters e Setters
-    public UUID getId() { return id; }
-    public void setId(UUID id) { this.id = id; }
+    public Instituicao(InstituicaoRequest request) {
+        this.nome = request.getNome();
+        this.email = request.getEmail();
+        this.senha = request.getSenha();
+        this.endereco = request.getEndereco();
+        this.dataDeFundacao = new Date();
+    }
 
-    public String getNome() { return nome; }
-    public void setNome(String nome) { this.nome = nome; }
 
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
 
-    public String getSenha() { return senha; }
-    public void setSenha(String senha) { this.senha = senha; }
+        return List.of(new SimpleGrantedAuthority("ROLE_INSTITUICAO"));
 
-    public String getEndereco() { return endereco; }
-    public void setEndereco(String endereco) { this.endereco = endereco; }
+    }
 
-    public String getRole() { return role; }
-    public void setRole(String role) { this.role = role; }
+    @Override
+    public String getPassword() {
+        return this.senha;
+    }
 
-    public List<String> getEmailsPermitidos() { return emailsPermitidos; }
-    public void setEmailsPermitidos(List<String> emailsPermitidos) { this.emailsPermitidos = emailsPermitidos; }
+    @Override
+    public String getUsername() {
+        return this.email;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return true;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return true;
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
 }

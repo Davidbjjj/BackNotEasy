@@ -7,6 +7,8 @@ import java.util.UUID;
 import com.example.BancoDeDados.Model.Account;
 import com.example.BancoDeDados.Model.Role;
 import com.example.BancoDeDados.Repositores.AccountRepository;
+import com.example.BancoDeDados.ResponseDTO.DisciplinaRequestDTO;
+import com.example.BancoDeDados.ResponseDTO.EstudanteListagemDTO;
 import com.example.BancoDeDados.Services.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -95,13 +97,31 @@ public class EstudanteController {
 
 
     @GetMapping("/listar")
-    public ResponseEntity<List<Estudante>> listar() {
+    public ResponseEntity<List<EstudanteListagemDTO>> listar() {
         try {
             List<Estudante> estudantes = estudanteService.listaEstudantes(new Estudante());
-            return ResponseEntity.ok(estudantes);
+
+            List<EstudanteListagemDTO> estudantesDTO = estudantes.stream()
+                    .map(estudante -> new EstudanteListagemDTO(
+                            estudante.getId(),
+                            estudante.getNome(),
+                            estudante.getDataNascimento(),
+                            estudante.getInstituicao(),
+                            estudante.getEmail(),
+                            estudante.getDisciplina().stream()
+                                    .map(disciplina -> new DisciplinaRequestDTO(
+                                            disciplina.getNome(),
+                                            disciplina.getProfessor().getEmail(),
+                                            disciplina.getInstituicao().getId()
+                                    ))
+                                    .toList()
+                    ))
+                    .toList();
+
+            return ResponseEntity.ok(estudantesDTO);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(null); // ou uma mensagem personalizada
+                    .body(null);
         }
     }
 

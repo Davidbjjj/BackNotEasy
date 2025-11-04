@@ -1,8 +1,5 @@
 package com.example.BancoDeDados.Security;
 
-import com.example.BancoDeDados.Model.Professor;
-import com.example.BancoDeDados.Repositores.ProfessorRepositores;
-import com.example.BancoDeDados.Services.LoginProfessorService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

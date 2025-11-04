@@ -4,18 +4,15 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.*;
+import java.util.UUID;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class InstituicaoResponse {
-
+public class DisciplinaProfessorResponseDTO {
     private UUID id;
     private String nome;
-    private String email;
-    private String endereco;
-    private String role;
-    private List<String> emailsPermitidos;
+    private String professorNome;
+    private String instituicaoNome;
 
 }

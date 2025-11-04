@@ -2,7 +2,6 @@ package com.example.BancoDeDados.Repositores;
 
 import com.example.BancoDeDados.Model.Estudante;
 import com.example.BancoDeDados.Model.Evento;
-import com.example.BancoDeDados.Model.Materia;
 import com.example.BancoDeDados.Model.NotaEvento;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -26,12 +25,12 @@ public interface NotaEventoRepository extends JpaRepository<NotaEvento, UUID> {
 
     @Query("SELECT n FROM NotaEvento n " +
            "JOIN n.evento e " +
-           "LEFT JOIN e.materia m " +
+           "LEFT JOIN e.disciplina m " +
            "WHERE e.data BETWEEN :startDate AND :endDate " +
-           "AND (:materiaId IS NULL OR m.id = :materiaId)")
-    List<NotaEvento> findByPeriodoAndMateria(
+           "AND (:disciplinaId IS NULL OR m.id = :disciplinaId)")
+    List<NotaEvento> findByPeriodoAndDisciplina(
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate,
-            @Param(value = "materiaId") UUID materiaId
+            @Param(value = "disciplinaId") UUID disciplinaId
     );
 }
