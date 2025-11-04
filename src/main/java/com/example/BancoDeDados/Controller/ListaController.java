@@ -53,6 +53,22 @@ public class ListaController {
         return listaService.buscarTodasListas();
     }
 
+    // Adicione este método no ListaController.java
+
+    // No ListaController.java - Método corrigido
+    @GetMapping("/estudante/{estudanteId}/questoes")
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<QuestaoResponseDTO>> buscarQuestoesPorEstudante(@PathVariable UUID estudanteId) {
+        try {
+            List<QuestaoResponseDTO> questoes = listaService.buscarQuestoesPorEstudante(estudanteId);
+            return ResponseEntity.ok(questoes);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(null);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
     @PostMapping("/salvar-questoes-docs/{listaId}")
     public ListaAddResponseDTO salvarQuestoesDoPdf(@PathVariable UUID listaId) {
         List<Questao> questoesProcessadas = tratarRespostaIAService.processarRespostaIA();

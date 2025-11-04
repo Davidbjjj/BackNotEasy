@@ -36,6 +36,47 @@ public class ListaService {
     @Autowired
     private ProfessorRepositores professorRepository;
 
+    // Adicione este método no ListaService.java
+
+    // No ListaService.java - Método corrigido
+    @Transactional
+    public List<QuestaoResponseDTO> buscarQuestoesPorEstudante(UUID estudanteId) {
+        // 1. Buscar todas as listas associadas ao estudante
+        List<Lista> listasDoEstudante = listaRepository.findByEstudanteId(estudanteId);
+
+        if (listasDoEstudante.isEmpty()) {
+            throw new RuntimeException("Estudante não está associado a nenhuma lista");
+        }
+
+        // 2. Coletar todas as questões de todas as listas
+        List<QuestaoResponseDTO> todasQuestoes = new ArrayList<>();
+
+        for (Lista lista : listasDoEstudante) {
+            // Carregar as questões da lista
+            Lista listaComQuestoes = listaRepository.findByIdWithQuestoes(lista.getId())
+                    .orElseThrow(() -> new RuntimeException("Lista não encontrada: " + lista.getId()));
+
+            if (listaComQuestoes.getQuestoes() != null && !listaComQuestoes.getQuestoes().isEmpty()) {
+                List<QuestaoResponseDTO> questoesDaLista = listaComQuestoes.getQuestoes().stream()
+                        .map(questao -> new QuestaoResponseDTO(
+                                questao.getId(),
+                                questao.getCabecalho(),
+                                questao.getEnunciado(),
+                                questao.getAlternativas(),
+                                questao.getGabarito()
+                        ))
+                        .collect(Collectors.toList());
+
+                todasQuestoes.addAll(questoesDaLista);
+            }
+        }
+
+        if (todasQuestoes.isEmpty()) {
+            throw new RuntimeException("Nenhuma questão encontrada para o estudante");
+        }
+
+        return todasQuestoes;
+    }
     @Transactional
     public void salvarQuestoesComLista(List<Questao> questoes, UUID listaId) {
         // Buscar a lista
