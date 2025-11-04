@@ -37,10 +37,8 @@ public class Disciplina {
         joinColumns = @JoinColumn(name = "disciplina_id"),
         inverseJoinColumns = @JoinColumn(name = "estudante_id")
     )
-    private Set<Estudante> estudantes= new HashSet<>();
+    private List<Estudante> estudantes = new ArrayList<>();
 
-    @ManyToMany(mappedBy = "disciplina")
-    private List<Estudante> estudante = new ArrayList<>();
     @OneToMany(mappedBy = "disciplina", cascade = CascadeType.ALL)
     private List<Evento> eventos = new ArrayList<>();
 

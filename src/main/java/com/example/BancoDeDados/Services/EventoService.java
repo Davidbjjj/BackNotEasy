@@ -63,7 +63,7 @@ public class EventoService {
     public void associarTodosEstudantesDaDisciplina(UUID eventoId, Disciplina disciplina) {
         Evento evento = findEventoByIdOrThrow(eventoId);
 
-        List<Estudante> estudantesDaDisciplina = disciplina.getEstudante();
+        List<Estudante> estudantesDaDisciplina = (List<Estudante>) disciplina.getEstudantes();
 
         if (estudantesDaDisciplina != null && !estudantesDaDisciplina.isEmpty()) {
             for (Estudante estudante : estudantesDaDisciplina) {

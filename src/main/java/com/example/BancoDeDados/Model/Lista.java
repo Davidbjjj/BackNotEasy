@@ -40,6 +40,9 @@ public class Lista {
             inverseJoinColumns = @JoinColumn(name = "questao_id")
     )
     private List<Questao> questoes;
+    @ManyToOne
+    @JoinColumn(name = "disciplina_id")
+    private Disciplina disciplina;
 
     @ManyToMany
     @JoinTable(
@@ -51,6 +54,21 @@ public class Lista {
 
     @OneToMany(mappedBy = "lista", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference("lista-eventos")
-    private List<ListaEvento> eventos = new ArrayList<>();
 
+    private List<ListaEvento> eventos = new ArrayList<>();
+    public void adicionarEstudante(Estudante estudante) {
+        if (estudantes == null) {
+            estudantes = new ArrayList<>();
+        }
+        if (estudante != null && !estudantes.contains(estudante)) {
+            estudantes.add(estudante);
+        }
+    }
+
+    // Método auxiliar para remover estudante
+    public void removerEstudante(Estudante estudante) {
+        if (estudantes != null && estudante != null) {
+            estudantes.remove(estudante);
+        }
+    }
 }
