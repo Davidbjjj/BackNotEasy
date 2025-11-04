@@ -45,30 +45,28 @@ public class ListaService {
         System.out.println("Lista encontrada: " + lista.getTitulo());
         System.out.println("Número de questões a serem adicionadas: " + questoes.size());
 
-        // Inicializar a lista de questões se for null
-        if (lista.getQuestoes() == null) {
-            lista.setQuestoes(new ArrayList<>());
+        // CORREÇÃO: Usar o método adicionarQuestao para estabelecer relação bidirecional
+        for (Questao questao : questoes) {
+            // Define a lista na questão
+            questao.setLista(lista);
+
+            // Adiciona a questão à lista usando o método que estabelece a relação bidirecional
+            lista.adicionarQuestao(questao);
+
+            // Salva a questão
+            Questao questaoSalva = questaoRepository.save(questao);
+            System.out.println("Questão salva com ID: " + questaoSalva.getId());
         }
 
-        // Salvar cada questão primeiro
-        List<Questao> questoesSalvas = questaoRepository.saveAll(questoes);
-        System.out.println("Questões salvas: " + questoesSalvas.size());
-
-        // ADICIONAR AS QUESTÕES À LISTA - ISSO CRIA OS REGISTROS NA TABELA DE JUNÇÃO
-        for (Questao questao : questoesSalvas) {
-            if (!lista.getQuestoes().contains(questao)) {
-                lista.getQuestoes().add(questao);
-                System.out.println("Questão ID " + questao.getId() + " adicionada à lista");
-            }
-        }
-
-        // Salvar a lista atualizada - ISSO PERSISTE NA TABELA lista_questoes
+        // CORREÇÃO: Salvar a lista para garantir que as alterações são persistidas
         Lista listaAtualizada = listaRepository.save(lista);
 
-        // VERIFICAR SE AS ASSOCIAÇÕES FORAM CRIADAS
-        int registrosJuncao = listaRepository.countQuestoesNaLista(listaId);
-        System.out.println("Registros na tabela lista_questoes: " + registrosJuncao);
-        System.out.println("Número final de questões na lista: " + listaAtualizada.getQuestoes().size());
+        // VERIFICAÇÃO: Buscar a lista novamente para confirmar
+        Lista listaVerificada = listaRepository.findByIdWithQuestoes(listaId)
+                .orElseThrow(() -> new RuntimeException("Lista não encontrada após salvar"));
+
+        System.out.println("Número final de questões na lista: " +
+                (listaVerificada.getQuestoes() != null ? listaVerificada.getQuestoes().size() : 0));
     }
 
     // Métodos para Questões

@@ -12,8 +12,8 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @EqualsAndHashCode(of = "id")
-@Entity(name = "questoes")
-@Table(name = "questoes")
+@Entity
+@Table(name = "questao")
 public class Questao {
 
 
