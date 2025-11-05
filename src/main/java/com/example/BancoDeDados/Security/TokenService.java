@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 @Service
 public class TokenService {
@@ -22,12 +23,40 @@ public class TokenService {
     public String gerarToken(Account account) {
         try {
             Algorithm algorithm = Algorithm.HMAC256(secret);
-            return JWT.create()
+
+            var tokenBuilder = JWT.create()
                     .withIssuer("BancoDeQuestoes")
                     .withSubject(account.getEmail())
                     .withClaim("role", account.getRole().name())
-                    .withExpiresAt(generateTokenExpiration())
-                    .sign(algorithm);
+                    .withExpiresAt(generateTokenExpiration());
+
+            if (account.getEstudanteProfile() != null) {
+                tokenBuilder
+                        .withClaim("userId", account.getEstudanteProfile().getId().toString())
+                        .withClaim("nome", account.getEstudanteProfile().getNome());
+
+                if (account.getEstudanteProfile().getInstituicao() != null) {
+                    tokenBuilder.withClaim("instituicaoId",
+                            account.getEstudanteProfile().getInstituicao().toString());
+                }
+            }
+
+            if (account.getProfessorProfile() != null) {
+                tokenBuilder
+                        .withClaim("userId", account.getProfessorProfile().getId().toString())
+                        .withClaim("nome", account.getProfessorProfile().getNome());
+
+                if (account.getProfessorProfile().getInstituicao() != null) {
+                    tokenBuilder.withClaim("instituicaoId",
+                            account.getProfessorProfile().getInstituicao().getId().toString());
+                }
+            }
+
+            if (account.getInstituicaoProfile() != null) {
+                tokenBuilder.withClaim("instituicaoNome", account.getInstituicaoProfile().getId().toString());
+            }
+
+            return tokenBuilder.sign(algorithm);
         } catch (JWTCreationException exception) {
             throw new RuntimeException("Erro ao gerar o token", exception);
         }
@@ -46,6 +75,64 @@ public class TokenService {
                     .verify(token)
                     .getSubject();
         } catch (JWTVerificationException exception) {
+            return null;
+        }
+    }
+
+    public UUID getUserIdFromToken(String token) {
+        try {
+            if (token.startsWith("Bearer ")) {
+                token = token.substring(7);
+            }
+
+            Algorithm algorithm = Algorithm.HMAC256(secret);
+            var decodedJWT = JWT.require(algorithm)
+                    .withIssuer("BancoDeQuestoes")
+                    .build()
+                    .verify(token);
+
+            return UUID.fromString(decodedJWT.getClaim("userId").asString());
+        } catch (Exception exception) {
+            return null;
+        }
+    }
+
+    public String getUserTypeFromToken(String token) {
+        try {
+            if (token.startsWith("Bearer ")) {
+                token = token.substring(7);
+            }
+
+            Algorithm algorithm = Algorithm.HMAC256(secret);
+            var decodedJWT = JWT.require(algorithm)
+                    .withIssuer("BancoDeQuestoes")
+                    .build()
+                    .verify(token);
+
+            return decodedJWT.getClaim("userType").asString();
+        } catch (Exception exception) {
+            return null;
+        }
+    }
+
+    public UUID getInstituicaoIdFromToken(String token) {
+        try {
+            if (token.startsWith("Bearer ")) {
+                token = token.substring(7);
+            }
+
+            Algorithm algorithm = Algorithm.HMAC256(secret);
+            var decodedJWT = JWT.require(algorithm)
+                    .withIssuer("BancoDeQuestoes")
+                    .build()
+                    .verify(token);
+
+            var instituicaoClaim = decodedJWT.getClaim("instituicaoId");
+            if (instituicaoClaim.isNull()) {
+                return null;
+            }
+            return UUID.fromString(instituicaoClaim.asString());
+        } catch (Exception exception) {
             return null;
         }
     }
