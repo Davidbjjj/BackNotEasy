@@ -8,7 +8,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class CorsConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**").allowedOrigins("https://noteasy-ocob5blj1-davids-projects-eff9a81c.vercel.app","http://localhost:3000","https://backnoteasy-production.up.railway.app","http://localhost:8080","https://noteasy-rho.vercel.app").allowedMethods("*");
+        registry.addMapping("/**").allowedOrigins("https://noteasy-rho.vercel.app/","http://localhost:3000","https://backnoteasy-production.up.railway.app","http://localhost:8080","https://noteasy-rho.vercel.app").allowedMethods("*");
     }
 }
 
