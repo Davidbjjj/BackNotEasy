@@ -53,7 +53,7 @@ public class Configurations {
     @Bean
     public CorsConfigurationSource corsConfigurationSource(){
         CorsConfiguration config=new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("*"));
+        config.setAllowedOriginPatterns(List.of("https://noteasy-rho.vercel.app","http://localhost:3000","https://backnoteasy-production.up.railway.app","http://backnoteasy-production.up.railway.app","http://localhost:8080","https://noteasy-rho.vercel.app"));
         config.setAllowedMethods(List.of("*"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(false);
