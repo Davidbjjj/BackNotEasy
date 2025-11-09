@@ -33,4 +33,23 @@ public interface NotaEventoRepository extends JpaRepository<NotaEvento, UUID> {
             @Param("endDate") LocalDateTime endDate,
             @Param(value = "disciplinaId") UUID disciplinaId
     );
+
+    // Métricas por disciplina: desempenho médio, alunos ativos e total de listas no período
+    @Query("SELECT d.id AS disciplinaId, d.nome AS disciplinaNome, " +
+           "AVG(n.nota) AS mediaNotas, " +
+           "COUNT(DISTINCT n.estudante.id) AS alunosAtivos, " +
+           "COUNT(DISTINCT l.id) AS totalListas " +
+           "FROM NotaEvento n " +
+           "JOIN n.evento e " +
+           "JOIN e.disciplina d " +
+           "LEFT JOIN e.listas le " +
+           "LEFT JOIN le.lista l " +
+           "WHERE e.data BETWEEN :startDate AND :endDate " +
+           "AND (:disciplinaId IS NULL OR d.id = :disciplinaId) " +
+           "GROUP BY d.id, d.nome")
+    List<Object[]> findMetricasPorDisciplina(
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            @Param("disciplinaId") UUID disciplinaId
+    );
 }

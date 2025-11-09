@@ -61,6 +61,22 @@ public class DashboardController {
             return ResponseEntity.badRequest().body("Erro: " + e.getMessage());
         }
     }
+
+    @GetMapping("/metricas/disciplinas")
+    public ResponseEntity<?> getMetricasPorDisciplina(
+            @RequestParam("startDate") String startDateStr,
+            @RequestParam("endDate") String endDateStr,
+            @RequestParam(value = "materiaId", required = false) java.util.UUID materiaId
+    ) {
+        try {
+            java.time.LocalDateTime startDate = java.time.LocalDateTime.parse(startDateStr);
+            java.time.LocalDateTime endDate = java.time.LocalDateTime.parse(endDateStr);
+            var resultado = dashboardService.getMetricasPorDisciplina(startDate, endDate, materiaId);
+            return ResponseEntity.ok(resultado);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Erro: " + e.getMessage());
+        }
+    }
   
     @GetMapping("/media-geral")
     public Double mediaGeral() {
@@ -70,6 +86,16 @@ public class DashboardController {
     @GetMapping("/ranking-disciplinas")
     public List<Map<String, Object>> ranking() {
         return notaService.getRankingDisciplinas();
+    }
+
+    @GetMapping("/metricas/institucional")
+    public ResponseEntity<?> getMetricasInstitucionais() {
+        try {
+            var resultado = dashboardService.getMetricasInstitucionais();
+            return ResponseEntity.ok(resultado);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Erro: " + e.getMessage());
+        }
     }
 
 

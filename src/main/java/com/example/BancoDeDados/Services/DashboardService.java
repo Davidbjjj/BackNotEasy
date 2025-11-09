@@ -2,8 +2,12 @@ package com.example.BancoDeDados.Services;
 
 import com.example.BancoDeDados.Model.Lista;
 import com.example.BancoDeDados.Model.NotaEvento;
+import com.example.BancoDeDados.Repositores.DisciplinaRepository;
+import com.example.BancoDeDados.Repositores.EstudanteRepositores;
 import com.example.BancoDeDados.Repositores.ListaRepository;
 import com.example.BancoDeDados.Repositores.NotaEventoRepository;
+import com.example.BancoDeDados.Repositores.NotaRepository;
+import com.example.BancoDeDados.Repositores.ProfessorRepositores;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -17,13 +21,25 @@ import java.util.UUID;
 public class DashboardService {
 
     private final ListaRepository listaRepository;
-
     private final NotaEventoRepository notaEventoRepository;
+    private final EstudanteRepositores estudanteRepositores;
+    private final ProfessorRepositores professorRepositores;
+    private final DisciplinaRepository disciplinaRepository;
+    private final NotaRepository notaRepository;
 
     @Autowired
-    public DashboardService(ListaRepository listaRepository, NotaEventoRepository notaEventoRepository) {
+    public DashboardService(ListaRepository listaRepository,
+                            NotaEventoRepository notaEventoRepository,
+                            EstudanteRepositores estudanteRepositores,
+                            ProfessorRepositores professorRepositores,
+                            DisciplinaRepository disciplinaRepository,
+                            NotaRepository notaRepository) {
         this.listaRepository = listaRepository;
         this.notaEventoRepository = notaEventoRepository;
+        this.estudanteRepositores = estudanteRepositores;
+        this.professorRepositores = professorRepositores;
+        this.disciplinaRepository = disciplinaRepository;
+        this.notaRepository = notaRepository;
     }
 
     public Map<String, Object> getDashboardByListaId(UUID listaId) {
@@ -111,4 +127,41 @@ public class DashboardService {
     return dashboard;
     }
     
+    public Map<String, Object> getMetricasPorDisciplina(LocalDateTime startDate,
+                                                        LocalDateTime endDate,
+                                                        UUID disciplinaId) {
+        List<Object[]> rows = notaEventoRepository.findMetricasPorDisciplina(startDate, endDate, disciplinaId);
+
+        List<Map<String, Object>> metricas = rows.stream().map(r -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("disciplinaId", r[0]);
+            m.put("disciplina", r[1]);
+            m.put("desempenhoMedio", r[2] != null ? r[2] : 0.0);
+            m.put("alunosAtivos", r[3] != null ? r[3] : 0L);
+            m.put("totalListas", r[4] != null ? r[4] : 0L);
+            return m;
+        }).collect(Collectors.toList());
+
+        Map<String, Object> dashboard = new HashMap<>();
+        dashboard.put("inicio", startDate);
+        dashboard.put("fim", endDate);
+        dashboard.put("materiaId", disciplinaId);
+        dashboard.put("metricas", metricas);
+        return dashboard;
+    }
+    
+    public Map<String, Object> getMetricasInstitucionais() {
+        long totalAlunos = estudanteRepositores.count();
+        long totalProfessores = professorRepositores.count();
+        long totalDisciplinas = disciplinaRepository.count();
+        Double mediaGlobal = notaRepository.calcularMediaGeral();
+
+        Map<String, Object> dashboard = new HashMap<>();
+        dashboard.put("totalAlunos", totalAlunos);
+        dashboard.put("totalProfessores", totalProfessores);
+        dashboard.put("totalDisciplinas", totalDisciplinas);
+        dashboard.put("mediaGlobalNotas", mediaGlobal != null ? mediaGlobal : 0.0);
+        return dashboard;
+    }
+
 }
