@@ -5,6 +5,7 @@ import com.example.BancoDeDados.Mapper.EventoMapper;
 import com.example.BancoDeDados.Model.*;
 import com.example.BancoDeDados.Repositores.*;
 import com.example.BancoDeDados.ResponseDTO.*;
+import com.example.BancoDeDados.dto.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -212,16 +213,70 @@ public class EventoService {
         return this.avaliarEntrega(request.getEventoId(), request.getEstudanteId(), avaliacaoRequest);
     }
 
+    @Transactional(readOnly = true)
+    public EventoDetalhesResponse buscarPorId(UUID eventoId) {
+        Evento evento = findEventoByIdOrThrow(eventoId);
 
+        ProfessorSimplesDTO professorDTO = (evento.getProfessor() != null)
+                ? new ProfessorSimplesDTO(evento.getProfessor().getId(), evento.getProfessor().getNome())
+                : null;
+
+        DisciplinaSimplesDTO disciplinaDTO = (evento.getDisciplina() != null)
+                ? new DisciplinaSimplesDTO(evento.getDisciplina().getId(), evento.getDisciplina().getNome())
+                : null;
+
+        List<NotaAlunoSimplesResponse> notasDTO = evento.getNotasEstudante().stream()
+                .filter(nota -> nota.getEstudante() != null && nota.getNota() != null)
+                .map(nota -> new NotaAlunoSimplesResponse(
+                        nota.getEstudante().getNome(),
+                        nota.getNota()
+                ))
+                .collect(Collectors.toList());
+
+        List<ListaSimplesResponse> listasDTO = listaEventoRepository.findByEvento(evento).stream()
+                .map(listaEvento -> new ListaSimplesResponse(
+                        listaEvento.getLista().getId(),
+                        listaEvento.getLista().getTitulo()
+                ))
+                .collect(Collectors.toList());
+
+        return new EventoDetalhesResponse(
+                evento.getId(),
+                evento.getTitulo(),
+                evento.getDescricao(),
+                evento.getData() != null ? evento.getData().toLocalDate() : null,
+                disciplinaDTO,
+                professorDTO,
+                notasDTO,
+                listasDTO
+        );
+    }
 
     @Transactional(readOnly = true)
-    public Evento buscarEventoPorId(UUID eventoId) {
-        return findEventoByIdOrThrow(eventoId);
+    public List<EventoListaDTO> listarTodosSimplificado() {
+        List<Evento> eventos = eventoRepository.findAll();
+        return eventos.stream()
+                .map(evento -> new EventoListaDTO(
+                        evento.getId(),
+                        evento.getTitulo(),
+                        evento.getData() != null ? evento.getData().toLocalDate() : null,
+                        evento.getDisciplina() != null ? evento.getDisciplina().getNome() : null,
+                        evento.getNotaMaxima()
+                ))
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<Evento> listarPorDisciplina(UUID disciplinaId) {
         return eventoRepository.findByDisciplinaId(disciplinaId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<EventoComNotasResponse> listarPorProfessor(UUID professorId) {
+        List<Evento> eventos = eventoRepository.findByProfessorId(professorId);
+        return eventos.stream()
+                .map(eventoMapper::toResponse)
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -255,10 +310,6 @@ public class EventoService {
         return notaEventoRepository.findByEvento(evento);
     }
 
-    /* ===========================
-       UTIL / CONVERSÕES
-       =========================== */
-
     private Evento buildEventoFromDTO(EventoRequest dto, Disciplina disciplina, Professor professor) {
         Evento evento = new Evento();
         evento.setTitulo(dto.getTitulo());
@@ -274,10 +325,6 @@ public class EventoService {
 
         return evento;
     }
-
-
-
-
 
     public NotaEventoResponse convertToResponse(NotaEvento notaEvento) {
         String professorNome = notaEvento.getProfessor() != null ? notaEvento.getProfessor().getNome() : null;
@@ -311,9 +358,6 @@ public class EventoService {
 
         return response;
     }
-    /* ===========================
-       REPOSITORY HELPERS
-       =========================== */
 
     private Evento findEventoByIdOrThrow(UUID eventoId) {
         return eventoRepository.findById(eventoId)
@@ -335,13 +379,11 @@ public class EventoService {
         Evento evento = findEventoByIdOrThrow(eventoId);
         Lista lista = findListaByIdOrThrow(request.getListaId());
 
-        // Verificar se o relacionamento já existe
         boolean jaExiste = listaEventoRepository.existsByListaAndEvento(lista, evento);
         if (jaExiste) {
             throw new IllegalStateException("Evento já está vinculado a esta lista");
         }
 
-        // Criar novo relacionamento
         ListaEvento listaEvento = new ListaEvento();
         listaEvento.setLista(lista);
         listaEvento.setEvento(evento);
@@ -352,31 +394,26 @@ public class EventoService {
     }
     @Transactional
     public void sincronizarNotasListaParaEvento(Lista lista, Evento evento) {
-        // Busca todos os estudantes da lista que também estão no evento
         List<Estudante> estudantesDaLista = lista.getEstudantes();
 
         for (Estudante estudante : estudantesDaLista) {
             try {
-                // Busca a nota do estudante na lista
                 Optional<ListaEstudanteNota> notaListaOpt = notaListaService.buscarNotaEstudanteOptional(lista.getId(), estudante.getId());
 
                 if (notaListaOpt.isPresent()) {
                     ListaEstudanteNota notaLista = notaListaOpt.get();
 
-                    // Busca ou cria a NotaEvento para este estudante
                     NotaEvento notaEvento = notaEventoRepository.findByEstudanteAndEvento(estudante, evento)
                             .orElseGet(() -> {
                                 NotaEvento novaNotaEvento = new NotaEvento();
                                 novaNotaEvento.setEstudante(estudante);
+
                                 novaNotaEvento.setEvento(evento);
                                 novaNotaEvento.setProfessor(evento.getProfessor());
                                 novaNotaEvento.setStatusEntrega(NotaEvento.StatusEntrega.ENTREGUE);
                                 return novaNotaEvento;
                             });
 
-                    // Converte a nota da lista para a nota do evento
-                    // Se a nota da lista é 9.2 (92%) e a nota máxima do evento é 10, então: 9.2
-                    // Se a nota máxima do evento é diferente, fazemos a proporção
                     Double notaConvertida = converterNotaListaParaEvento(
                             notaLista.getNota(),
                             evento.getNotaMaxima()
@@ -397,41 +434,32 @@ public class EventoService {
             return null;
         }
 
-        // Converte BigDecimal para double
         double notaListaDouble = notaLista.doubleValue();
 
-        // Se a nota máxima do evento é 10, retorna direto
         if (notaMaximaEvento == 10.0) {
             return notaListaDouble;
         }
 
-        // Faz a proporção: (notaLista / 10) * notaMaximaEvento
         return (notaListaDouble / 10.0) * notaMaximaEvento;
     }
 
-    // Versão alternativa se estiver usando Double na ListaEstudanteNota:
     private Double converterNotaListaParaEvento(Double notaLista, Double notaMaximaEvento) {
         if (notaLista == null) {
             return null;
         }
 
-        // Se a nota máxima do evento é 10, retorna direto
         if (notaMaximaEvento == 10.0) {
             return notaLista;
         }
 
-        // Faz a proporção: (notaLista / 10) * notaMaximaEvento
         return (notaLista / 10.0) * notaMaximaEvento;
     }
-    /**
-     * Força a sincronização das notas de uma lista já associada a um evento
-     */
+
     @Transactional
     public void sincronizarNotasListaEvento(UUID eventoId, UUID listaId) {
         Evento evento = findEventoByIdOrThrow(eventoId);
         Lista lista = findListaByIdOrThrow(listaId);
 
-        // Verifica se a lista está associada ao evento
         boolean listaAssociada = listaEventoRepository.existsByListaAndEvento(lista, evento);
         if (!listaAssociada) {
             throw new IllegalStateException("Lista não está associada a este evento");
@@ -450,11 +478,6 @@ public class EventoService {
         listaEventoRepository.delete(listaEvento);
     }
 
-
-    // ===========================
-    // CONVERSÕES
-    // ===========================
-
     private ListaEventoResponse convertToListaEventoResponse(ListaEvento listaEvento) {
         ListaEventoResponse response = new ListaEventoResponse();
         response.setId(listaEvento.getId());
@@ -464,10 +487,6 @@ public class EventoService {
         response.setEventoTitulo(listaEvento.getEvento().getTitulo());
         return response;
     }
-
-    // ===========================
-    // REPOSITORY HELPERS
-    // ===========================
 
     private Lista findListaByIdOrThrow(UUID listaId) {
         return listaRepository.findById(listaId)

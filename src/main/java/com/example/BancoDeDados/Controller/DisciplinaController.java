@@ -59,6 +59,11 @@ public class DisciplinaController {
         return ResponseEntity.ok(disciplinaService.buscarPorInstituicao(nomeInstituicao));
     }
 
+    @GetMapping("/professor/{professorId}")
+    public ResponseEntity<List<DisciplinaResponseDTO>> buscarPorProfessor(@PathVariable UUID professorId) {
+        return ResponseEntity.ok(disciplinaService.buscarPorProfessor(professorId));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletar(@PathVariable UUID id) {
         disciplinaService.deletar(id);

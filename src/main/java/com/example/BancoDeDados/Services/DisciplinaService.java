@@ -181,6 +181,11 @@ public class DisciplinaService {
                 .stream().map(this::mapToDTO).collect(Collectors.toList());
     }
 
+    public List<DisciplinaResponseDTO> buscarPorProfessor(UUID professorId) {
+        return disciplinaRepository.findByProfessorId(professorId)
+                .stream().map(this::mapToDTO).collect(Collectors.toList());
+    }
+
     @Transactional
     public void deletar(UUID id) {
         Disciplina disciplina = disciplinaRepository.findById(id)
