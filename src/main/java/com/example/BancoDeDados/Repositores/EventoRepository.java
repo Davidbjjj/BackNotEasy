@@ -19,4 +19,7 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
 
     // Buscar eventos em que um aluno está vinculado
     List<Evento> findByNotasEstudante_Estudante_Id(UUID estudanteId);
+
+    // Buscar eventos de um professor pelo id
+    List<Evento> findByProfessorId(UUID professorId);
 }

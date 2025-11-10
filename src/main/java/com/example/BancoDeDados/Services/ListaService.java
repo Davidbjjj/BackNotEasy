@@ -2,6 +2,7 @@ package com.example.BancoDeDados.Services;
 
 import com.example.BancoDeDados.Model.*;
 import com.example.BancoDeDados.Repositores.*;
+import com.example.BancoDeDados.ResponseDTO.AlunoNotaDTO;
 import com.example.BancoDeDados.ResponseDTO.DisciplinaProfessorResponseDTO;
 import com.example.BancoDeDados.ResponseDTO.ListaCompletaResponseDTO;
 import com.example.BancoDeDados.ResponseDTO.ListaResponseDTO;
@@ -35,6 +36,16 @@ public class ListaService {
 
     @Autowired
     private ProfessorRepositores professorRepository;
+
+    @Autowired
+    private ListaEstudanteNotaRepository listaEstudanteNotaRepository;
+
+    public List<AlunoNotaDTO> getNotasByListaId(UUID listaId) {
+        List<ListaEstudanteNota> notas = listaEstudanteNotaRepository.findByListaId(listaId);
+        return notas.stream()
+                .map(nota -> new AlunoNotaDTO(nota.getEstudante().getNome(), nota.getNota()))
+                .collect(Collectors.toList());
+    }
 
     // Adicione este método no ListaService.java
 

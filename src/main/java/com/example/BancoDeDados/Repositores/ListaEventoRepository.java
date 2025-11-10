@@ -18,5 +18,7 @@ public interface ListaEventoRepository extends JpaRepository<ListaEvento, UUID> 
     boolean existsByListaAndEvento(Lista lista, Evento evento);
     List<ListaEvento> findByListaId(UUID listaId);
 
+    List<ListaEvento> findByEvento(Evento evento);
+
     void deleteByListaAndEvento(Lista lista, Evento evento);
 }

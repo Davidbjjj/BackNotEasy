@@ -48,6 +48,16 @@ public class ListaController {
         this.listaService = listaService;
     }
 
+    @GetMapping("/{listaId}/notas")
+    public ResponseEntity<List<AlunoNotaDTO>> getNotasByListaId(@PathVariable UUID listaId) {
+        try {
+            List<AlunoNotaDTO> notas = listaService.getNotasByListaId(listaId);
+            return ResponseEntity.ok(notas);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
     @GetMapping
     public List<ListaResponseDTO> listarTodasListas() {
         return listaService.buscarTodasListas();

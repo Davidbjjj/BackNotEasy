@@ -5,6 +5,8 @@ import com.example.BancoDeDados.Model.Evento;
 import com.example.BancoDeDados.Model.NotaEvento;
 import com.example.BancoDeDados.ResponseDTO.*;
 import com.example.BancoDeDados.Services.EventoService;
+import com.example.BancoDeDados.dto.EventoDetalhesResponse;
+import com.example.BancoDeDados.dto.EventoListaDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +22,12 @@ public class EventoController {
 
     @Autowired
     private EventoService service;
+
+    @GetMapping
+    public ResponseEntity<List<EventoListaDTO>> listarTodosSimplificado() {
+        List<EventoListaDTO> eventos = service.listarTodosSimplificado();
+        return ResponseEntity.ok(eventos);
+    }
 
     @PostMapping("/notas")
     public ResponseEntity<NotaEventoResponse> adicionarOuAtualizarNotaEvento(@RequestBody NotaEventoRequest request) {
@@ -85,13 +93,21 @@ public class EventoController {
     // ===========================
 
     @GetMapping("/{eventoId}")
-    public Evento buscarEventoPorId(@PathVariable UUID eventoId) {
-        return service.buscarEventoPorId(eventoId);
+    public ResponseEntity<EventoDetalhesResponse> buscarPorId(@PathVariable UUID eventoId) {
+        EventoDetalhesResponse response = service.buscarPorId(eventoId);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/disciplina/{disciplinaId}")
     public List<Evento> listarPorDisciplina(@PathVariable UUID disciplinaId) {
         return service.listarPorDisciplina(disciplinaId);
+    }
+
+
+
+    @GetMapping("/professor/{professorId}")
+    public List<EventoComNotasResponse> listarPorProfessor(@PathVariable UUID professorId) {
+        return service.listarPorProfessor(professorId);
     }
 
     @GetMapping("/aluno/email/{alunoEmail}")
@@ -135,4 +151,3 @@ public class EventoController {
     }
 
 }
-
