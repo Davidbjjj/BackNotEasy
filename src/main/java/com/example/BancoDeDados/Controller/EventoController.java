@@ -5,6 +5,7 @@ import com.example.BancoDeDados.Model.Evento;
 import com.example.BancoDeDados.Model.NotaEvento;
 import com.example.BancoDeDados.ResponseDTO.*;
 import com.example.BancoDeDados.Services.EventoService;
+import com.example.BancoDeDados.Services.NotaListaService;
 import com.example.BancoDeDados.dto.EventoDetalhesResponse;
 import com.example.BancoDeDados.dto.EventoListaDTO;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +23,9 @@ public class EventoController {
 
     @Autowired
     private EventoService service;
+
+    @Autowired
+    private NotaListaService notaListaService;
 
     @GetMapping
     public ResponseEntity<List<EventoListaDTO>> listarTodosSimplificado() {
@@ -150,4 +154,14 @@ public class EventoController {
         service.removerListaDoEvento(eventoId, listaId);
     }
 
+    @GetMapping("/eventos/{eventoId}/listas/{listaId}/estudantes/{estudanteId}/respostas")
+    public ResponseEntity<RespostasListaComNotaDTO> getRespostasComNota(
+            @PathVariable UUID eventoId,
+            @PathVariable UUID listaId,
+            @PathVariable UUID estudanteId) {
+        RespostasListaComNotaDTO respostas = notaListaService.buscarRespostasPorListaComNotaPorEstudante(listaId, estudanteId);
+        // O eventoId não está no DTO, então precisamos de um novo DTO ou de outra abordagem.
+        // Por enquanto, vamos retornar o que temos e ajustar depois.
+        return ResponseEntity.ok(respostas);
+    }
 }

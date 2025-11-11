@@ -141,6 +141,7 @@ public class NotaListaService {
                     RespostaEstudanteQuestaoDTO dto = new RespostaEstudanteQuestaoDTO();
                     dto.setRespostaId(resposta.getId());
                     dto.setQuestaoId(resposta.getQuestao().getId());
+                    dto.setEnunciado(resposta.getQuestao().getEnunciado());
                     dto.setEstudanteId(resposta.getEstudante().getId());
                     dto.setNomeEstudante(resposta.getEstudante().getNome());
                     dto.setAlternativa(resposta.getAlternativa());
@@ -177,6 +178,7 @@ public class NotaListaService {
                     RespostaEstudanteQuestaoDTO dto = new RespostaEstudanteQuestaoDTO();
                     dto.setRespostaId(resposta.getId());
                     dto.setQuestaoId(resposta.getQuestao().getId());
+                    dto.setEnunciado(resposta.getQuestao().getEnunciado());
                     dto.setEstudanteId(resposta.getEstudante().getId());
                     dto.setNomeEstudante(resposta.getEstudante().getNome());
                     dto.setAlternativa(resposta.getAlternativa());
@@ -363,6 +365,7 @@ public class NotaListaService {
                     RespostaEstudanteQuestaoDTO dto = new RespostaEstudanteQuestaoDTO();
                     dto.setRespostaId(resposta.getId());
                     dto.setQuestaoId(resposta.getQuestao().getId());
+                    dto.setEnunciado(resposta.getQuestao().getEnunciado());
                     dto.setEstudanteId(resposta.getEstudante().getId());
                     dto.setNomeEstudante(resposta.getEstudante().getNome());
                     dto.setAlternativa(resposta.getAlternativa());

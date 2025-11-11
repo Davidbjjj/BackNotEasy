@@ -1,4 +1,6 @@
 package com.example.BancoDeDados.dto;
 
-public record NotaAlunoSimplesResponse(String nomeAluno, Double nota) {
+import java.util.UUID;
+
+public record NotaAlunoSimplesResponse(UUID estudanteId, String nomeAluno, Double nota) {
 }

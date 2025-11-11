@@ -228,6 +228,7 @@ public class EventoService {
         List<NotaAlunoSimplesResponse> notasDTO = evento.getNotasEstudante().stream()
                 .filter(nota -> nota.getEstudante() != null && nota.getNota() != null)
                 .map(nota -> new NotaAlunoSimplesResponse(
+                        nota.getEstudante().getId(),
                         nota.getEstudante().getNome(),
                         nota.getNota()
                 ))
