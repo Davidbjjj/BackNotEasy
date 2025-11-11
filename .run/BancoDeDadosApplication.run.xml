@@ -1,13 +1,12 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="BancoDeDadosApplication" type="Application" factoryName="Application" nameIsGenerated="true">
     <option name="ALTERNATIVE_JRE_PATH" value="$USER_HOME$/.jdks/ms-17.0.17" />
-    <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
     <envs>
       <env name="APIkey" value="AIzaSyAzEYDeLYJaAywBUbHZYwwTxRgVH7GDX18" />
       <env name="SPRING_DATASOURCE_DRIVER_CLASS_NAME" value="org.postgresql.Driver" />
-      <env name="SPRING_DATASOURCE_PASSWORD" value="j6nJzg8fIhhOLXxOnnm89ubca4t5KSjr" />
-      <env name="SPRING_DATASOURCE_URL" value="jdbc:postgresql://dpg-d3oiaggdl3ps73c0jung-a.oregon-postgres.render.com:5432/noteasy_1ua7" />
-      <env name="SPRING_DATASOURCE_USERNAME" value="noteasy_1ua7_user" />
+      <env name="SPRING_DATASOURCE_PASSWORD" value="h9WRTxFROWvRfXaRRsgOkMQmm5g7gC3Y" />
+      <env name="SPRING_DATASOURCE_URL" value="jdbc:postgresql://dpg-d49ms1vpm1nc73dfqai0-a.oregon-postgres.render.com:5432/noteasy_bb13" />
+      <env name="SPRING_DATASOURCE_USERNAME" value="noteasy_bb13_user" />
     </envs>
     <option name="MAIN_CLASS_NAME" value="com.example.BancoDeDados.BancoDeDadosApplication" />
     <module name="BancoDeDados" />
