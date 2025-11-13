@@ -12,4 +12,5 @@ public interface DisciplinaRepository extends JpaRepository<Disciplina, UUID> {
     Optional<Disciplina> findById(UUID Id);
     Optional<Disciplina> findByNome(String nome);
     List<Disciplina> findByProfessorId(UUID professorId);
+    List<Disciplina> findByEstudantesId(UUID estudanteId);
 }

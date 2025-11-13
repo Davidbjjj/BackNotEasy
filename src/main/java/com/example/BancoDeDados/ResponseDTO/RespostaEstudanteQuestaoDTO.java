@@ -11,6 +11,7 @@ import java.util.UUID;
 public class RespostaEstudanteQuestaoDTO {
     private Long respostaId;
     private Integer questaoId;
+    private String enunciado; // Adicionado
     private UUID estudanteId;
     private String nomeEstudante;
     private Integer alternativa;
