@@ -32,18 +32,25 @@ public class QuestaoService {
             throw new IllegalArgumentException("Índice do gabarito inválido.");
         }
 
-        Questao novaQuestao = new Questao();
-        novaQuestao.setCabecalho(cabecalho);
-        novaQuestao.setEnunciado(enunciado);
-        novaQuestao.setAlternativas(alternativas);
-        novaQuestao.setGabarito(gabarito);
+        // ✅ Usando builder pattern e helper method
+        Questao novaQuestao = Questao.builder()
+            .cabecalho(cabecalho)
+            .enunciado(enunciado)
+            .gabarito(gabarito)
+            .build();
+
+        // ✅ Usa helper para adicionar alternativas
+        novaQuestao.setAlternativasTexto(alternativas);
+
         return questaoRepositores.save(novaQuestao);
     }
 
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public QuestaoResponseDTO buscarQuestaoPorIdComGabaritoDTO(Integer id) {
-        var questao = questaoRepositores.findById(id).orElse(null);
+        var questao = questaoRepositores.findByIdWithAlternativas(id).orElse(null);
         if (questao == null) return null;
-        return new QuestaoResponseDTO(questao.getId(), questao.getCabecalho(), questao.getEnunciado(), questao.getAlternativas(), questao.getGabarito());
+        // ✅ Usa helper para obter alternativas como List<String>
+        return new QuestaoResponseDTO(questao.getId(), questao.getCabecalho(), questao.getEnunciado(), questao.getAlternativasTexto(), questao.getGabarito());
     }
 
     public List<QuestaoDTO> listarQuestoes() {
@@ -51,11 +58,17 @@ public class QuestaoService {
     }
 
     private QuestaoDTO convertToDTO(Questao questao) {
+        // DEBUG: Log para investigar dados
+        System.out.println("DEBUG convertToDTO - ID: " + questao.getId() +
+                         ", Cabecalho: '" + questao.getCabecalho() + "'" +
+                         ", Enunciado: '" + questao.getEnunciado() + "'");
+
         QuestaoDTO dto = new QuestaoDTO();
         dto.setId(questao.getId());
         dto.setCabecalho(questao.getCabecalho());
         dto.setEnunciado(questao.getEnunciado());
-        dto.setAlternativas(questao.getAlternativas());
+        // ✅ Usa helper para obter alternativas como List<String>
+        dto.setAlternativas(questao.getAlternativasTexto());
         dto.setGabarito(questao.getGabarito());
         if (questao.getLista() != null) dto.setTituloLista(questao.getLista().getTitulo());
         return dto;
@@ -65,17 +78,19 @@ public class QuestaoService {
 
     public List<Questao> salvarQuestoes(List<Questao> questoes) { questaoRepositores.saveAll(questoes); return questoes; }
 
+    @org.springframework.transaction.annotation.Transactional
     public QuestaoResponseDTO atualizarQuestaoDaLista(UUID listaId, Integer questaoId, QuestaoRequestDTO req) {
-        var questao = questaoRepositores.findById(questaoId).orElseThrow(() -> new RuntimeException("Questão não encontrada"));
+        var questao = questaoRepositores.findByIdWithAlternativas(questaoId).orElseThrow(() -> new RuntimeException("Questão não encontrada"));
         if (questao.getLista() == null || questao.getLista().getId() == null || !questao.getLista().getId().equals(listaId)) {
             throw new RuntimeException("Questão não pertence à lista informada");
         }
         questao.setCabecalho(req.getCabecalho());
         questao.setEnunciado(req.getEnunciado());
-        questao.setAlternativas(req.getAlternativas());
+        // ✅ Usa helper para atualizar alternativas
+        questao.setAlternativasTexto(req.getAlternativas());
         questao.setGabarito(req.getGabarito());
         var salva = questaoRepositores.save(questao);
-        return new QuestaoResponseDTO(salva.getId(), salva.getCabecalho(), salva.getEnunciado(), salva.getAlternativas(), salva.getGabarito());
+        return new QuestaoResponseDTO(salva.getId(), salva.getCabecalho(), salva.getEnunciado(), salva.getAlternativasTexto(), salva.getGabarito());
     }
 
     public void deletarQuestaoDaLista(UUID listaId, Integer questaoId) {
@@ -86,11 +101,12 @@ public class QuestaoService {
         questaoRepositores.delete(questao);
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public QuestaoResponseDTO associarQuestaoALista(UUID listaId, Integer questaoId) {
         var lista = listaRepository.findById(listaId).orElseThrow(() -> new RuntimeException("Lista não encontrada"));
-        var questao = questaoRepositores.findById(questaoId).orElseThrow(() -> new RuntimeException("Questão não encontrada"));
+        var questao = questaoRepositores.findByIdWithAlternativas(questaoId).orElseThrow(() -> new RuntimeException("Questão não encontrada"));
         questao.setLista(lista);
         var salva = questaoRepositores.save(questao);
-        return new QuestaoResponseDTO(salva.getId(), salva.getCabecalho(), salva.getEnunciado(), salva.getAlternativas(), salva.getGabarito());
+        return new QuestaoResponseDTO(salva.getId(), salva.getCabecalho(), salva.getEnunciado(), salva.getAlternativasTexto(), salva.getGabarito());
     }
 }

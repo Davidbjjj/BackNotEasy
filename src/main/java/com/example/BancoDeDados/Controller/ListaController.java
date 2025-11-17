@@ -70,7 +70,6 @@ public class ListaController {
 
     // No ListaController.java - Método corrigido
     @GetMapping("/estudante/{estudanteId}/questoes")
-    @Transactional(readOnly = true)
     public ResponseEntity<List<QuestaoResponseDTO>> buscarQuestoesPorEstudante(@PathVariable UUID estudanteId) {
         try {
             List<QuestaoResponseDTO> questoes = listaService.buscarQuestoesPorEstudante(estudanteId);
@@ -139,7 +138,7 @@ public class ListaController {
                             questao.getId(),
                             questao.getCabecalho(),
                             questao.getEnunciado(),
-                            questao.getAlternativas(),
+                            questao.getAlternativasTexto(),
                             questao.getGabarito()
                     );
                 })

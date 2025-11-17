@@ -21,7 +21,7 @@ public class QuestaoDTO {
         this.id = questao.getId();
         this.cabecalho = questao.getCabecalho();
         this.enunciado = questao.getEnunciado();
-        this.alternativas = questao.getAlternativas();
+        this.alternativas = questao.getAlternativasTexto();
         this.gabarito = questao.getGabarito();
         this.tituloLista = questao.getLista() != null ?
                 questao.getLista().getTitulo() : null;

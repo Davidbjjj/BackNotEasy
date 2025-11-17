@@ -7,7 +7,7 @@ import com.example.BancoDeDados.ResponseDTO.DisciplinaProfessorResponseDTO;
 import com.example.BancoDeDados.ResponseDTO.ListaCompletaResponseDTO;
 import com.example.BancoDeDados.ResponseDTO.ListaResponseDTO;
 import com.example.BancoDeDados.ResponseDTO.QuestaoResponseDTO;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
@@ -51,7 +51,7 @@ public class ListaService {
     // Adicione este método no ListaService.java
 
     // No ListaService.java - Método corrigido
-    @Transactional
+    @Transactional(readOnly = true)
     public List<QuestaoResponseDTO> buscarQuestoesPorEstudante(UUID estudanteId) {
         // 1. Buscar todas as listas associadas ao estudante
         List<Lista> listasDoEstudante = listaRepository.findByEstudanteId(estudanteId);
@@ -64,22 +64,30 @@ public class ListaService {
         List<QuestaoResponseDTO> todasQuestoes = new ArrayList<>();
 
         for (Lista lista : listasDoEstudante) {
-            // Carregar as questões da lista
-            Lista listaComQuestoes = listaRepository.findByIdWithQuestoes(lista.getId())
-                    .orElseThrow(() -> new RuntimeException("Lista não encontrada: " + lista.getId()));
+            // Buscar questões da lista
+            List<Questao> questoesDaLista = questaoRepository.findByListaIdWithAlternativas(lista.getId());
 
-            if (listaComQuestoes.getQuestoes() != null && !listaComQuestoes.getQuestoes().isEmpty()) {
-                List<QuestaoResponseDTO> questoesDaLista = listaComQuestoes.getQuestoes().stream()
+            if (questoesDaLista != null && !questoesDaLista.isEmpty()) {
+                // Inicializar alternativas DENTRO da transação antes de converter para DTO
+                for (Questao questao : questoesDaLista) {
+                    // Força o carregamento das alternativas enquanto ainda está na transação
+                    if (questao.getAlternativas() != null) {
+                        questao.getAlternativas().size(); // Toca a coleção lazy para inicializar
+                    }
+                }
+
+                // Agora converte para DTO com alternativas já carregadas
+                List<QuestaoResponseDTO> questoesDTOs = questoesDaLista.stream()
                         .map(questao -> new QuestaoResponseDTO(
                                 questao.getId(),
                                 questao.getCabecalho(),
                                 questao.getEnunciado(),
-                                questao.getAlternativas(),
+                                questao.getAlternativasTexto(),
                                 questao.getGabarito()
                         ))
                         .collect(Collectors.toList());
 
-                todasQuestoes.addAll(questoesDaLista);
+                todasQuestoes.addAll(questoesDTOs);
             }
         }
 
@@ -128,7 +136,8 @@ public class ListaService {
         Lista lista = listaRepository.findById(listaId)
                 .orElseThrow(() -> new RuntimeException("Lista não encontrada"));
 
-        Questao questao = questaoRepository.findById(questaoId)
+        // Usando método otimizado com FETCH JOIN
+        Questao questao = questaoRepository.findByIdWithAlternativas(questaoId)
                 .orElseThrow(() -> new RuntimeException("Questão não encontrada"));
 
         // Verifica se a questão já está na lista
@@ -282,7 +291,8 @@ public class ListaService {
         Lista lista = listaRepository.findByIdWithQuestoes(listaId)
                 .orElseThrow(() -> new RuntimeException("Lista não encontrada"));
 
-        Questao questao = questaoRepository.findById(questaoId)
+        // Usando método otimizado com FETCH JOIN
+        Questao questao = questaoRepository.findByIdWithAlternativas(questaoId)
                 .orElseThrow(() -> new RuntimeException("Questão não encontrada"));
 
         if (lista.getQuestoes() != null && lista.getQuestoes().contains(questao)) {
@@ -306,7 +316,8 @@ public class ListaService {
         Lista lista = listaRepository.findById(listaId)
                 .orElseThrow(() -> new RuntimeException("Lista não encontrada"));
 
-        Questao questao = questaoRepository.findById(questaoId)
+        // Usando método otimizado com FETCH JOIN
+        Questao questao = questaoRepository.findByIdWithAlternativas(questaoId)
                 .orElseThrow(() -> new RuntimeException("Questão não encontrada"));
 
         if (lista.getQuestoes() != null && lista.getQuestoes().contains(questao)) {
@@ -322,12 +333,14 @@ public class ListaService {
         questaoRepository.save(questao);
         listaRepository.save(lista);
 
-        List<QuestaoResponseDTO> questaoDTOs = lista.getQuestoes().stream()
+        // Buscar todas as questões com alternativas otimizadas
+        List<Questao> questoesCompletas = questaoRepository.findByListaIdWithAlternativas(listaId);
+        List<QuestaoResponseDTO> questaoDTOs = questoesCompletas.stream()
                 .map(q -> new QuestaoResponseDTO(
                         q.getId(),
                         q.getCabecalho(),
                         q.getEnunciado(),
-                        q.getAlternativas(),
+                        q.getAlternativasTexto(),
                         q.getGabarito()))
                 .collect(toList());
 
@@ -344,7 +357,8 @@ public class ListaService {
         Lista lista = listaRepository.findById(listaId)
                 .orElseThrow(() -> new RuntimeException("Lista não encontrada"));
 
-        List<Questao> questões = questaoRepository.findAllById(questaoIds);
+        // Usando método otimizado com FETCH JOIN para múltiplas questões
+        List<Questao> questões = questaoRepository.findAllByIdWithAlternativas(questaoIds);
 
         if (questões.size() != questaoIds.size()) {
             throw new RuntimeException("Uma ou mais questões não foram encontradas");
@@ -367,16 +381,24 @@ public class ListaService {
         return new ListaResponseDTO(lista.getId(), lista.getTitulo(), lista.getProfessor().getNome());
     }
 
+    @Transactional(readOnly = true)
     public List<QuestaoResponseDTO> buscarQuestoesPorLista(UUID listaId) {
-        Lista lista = listaRepository.findById(listaId)
-                .orElseThrow(() -> new RuntimeException("Lista não encontrada"));
+        // Buscar questões da lista
+        List<Questao> questoes = questaoRepository.findByListaIdWithAlternativas(listaId);
 
-        return lista.getQuestoes().stream()
+        // Inicializar alternativas dentro da transação
+        questoes.forEach(q -> {
+            if (q.getAlternativas() != null) {
+                q.getAlternativas().size();
+            }
+        });
+
+        return questoes.stream()
                 .map(questao -> new QuestaoResponseDTO(
                         questao.getId(),
                         questao.getCabecalho(),
                         questao.getEnunciado(),
-                        questao.getAlternativas(),
+                        questao.getAlternativasTexto(),
                         questao.getGabarito()
                 ))
                 .collect(toList());
@@ -387,7 +409,8 @@ public class ListaService {
         Lista lista = listaRepository.findById(listaId)
                 .orElseThrow(() -> new RuntimeException("Lista não encontrada"));
 
-        Questao questao = questaoRepository.findById(questaoId)
+        // Usando método otimizado com FETCH JOIN
+        Questao questao = questaoRepository.findByIdWithAlternativas(questaoId)
                 .orElseThrow(() -> new RuntimeException("Questão não encontrada"));
 
         // Ajusta relação bidirecional: remove da coleção e limpa o lado dono
@@ -476,17 +499,27 @@ public class ListaService {
         return new ListaResponseDTO(lista.getId(), lista.getTitulo(), lista.getProfessor().getNome());
     }
 
+    @Transactional(readOnly = true)
     public ListaCompletaResponseDTO buscarListaCompleta(UUID listaId) {
         Lista lista = listaRepository.findById(listaId)
                 .orElseThrow(() -> new RuntimeException("Lista não encontrada"));
 
-        // Converte as questões para DTO
-        List<QuestaoResponseDTO> questaoDTOs = lista.getQuestoes().stream()
+        // Buscar questões e inicializar alternativas dentro da transação
+        List<Questao> questoes = questaoRepository.findByListaIdWithAlternativas(listaId);
+
+        // Inicializar alternativas dentro da transação
+        questoes.forEach(q -> {
+            if (q.getAlternativas() != null) {
+                q.getAlternativas().size();
+            }
+        });
+
+        List<QuestaoResponseDTO> questaoDTOs = questoes.stream()
                 .map(q -> new QuestaoResponseDTO(
                         q.getId(),
                         q.getCabecalho(),
                         q.getEnunciado(),
-                        q.getAlternativas(),
+                        q.getAlternativasTexto(),
                         q.getGabarito()))
                 .collect(toList());
 
