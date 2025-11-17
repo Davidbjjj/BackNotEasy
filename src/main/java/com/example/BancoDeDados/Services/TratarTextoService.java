@@ -34,7 +34,7 @@ public class TratarTextoService {
             questao.setEnunciado(enunciado);
 
             List<String> alternativas = pegarAlternativas(enunciadoCompleto);
-            questao.setAlternativas(alternativas);
+            questao.setAlternativasTexto(alternativas);
             questoes.add(questao);
         }
 

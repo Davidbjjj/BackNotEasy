@@ -68,6 +68,11 @@ public class TokenService {
                 token = token.substring(7);
             }
 
+            // Bloqueia tokens revogados
+            if (isTokenRevoked(token)) {
+                return null;
+            }
+
             Algorithm algorithm = Algorithm.HMAC256(secret);
             return JWT.require(algorithm)
                     .withIssuer("BancoDeQuestoes")

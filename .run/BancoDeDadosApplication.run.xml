@@ -2,7 +2,7 @@
   <configuration default="false" name="BancoDeDadosApplication" type="Application" factoryName="Application" nameIsGenerated="true">
     <option name="ALTERNATIVE_JRE_PATH" value="$USER_HOME$/.jdks/ms-17.0.17" />
     <envs>
-      <env name="APIkey" value="AIzaSyAzEYDeLYJaAywBUbHZYwwTxRgVH7GDX18" />
+      <env name="APIkey" value="AIzaSyBc6P_hYQWtyzdTlppZFSo3kNjwxek8lew" />
       <env name="SPRING_DATASOURCE_DRIVER_CLASS_NAME" value="org.postgresql.Driver" />
       <env name="SPRING_DATASOURCE_PASSWORD" value="h9WRTxFROWvRfXaRRsgOkMQmm5g7gC3Y" />
       <env name="SPRING_DATASOURCE_URL" value="jdbc:postgresql://dpg-d49ms1vpm1nc73dfqai0-a.oregon-postgres.render.com:5432/noteasy_bb13" />

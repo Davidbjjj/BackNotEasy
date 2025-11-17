@@ -43,7 +43,7 @@ public class TratarRespostaIAService {
 
                 String alternativasBrutas = matcherQuestaoCompleta.group(3);
                 List<String> alternativas = processarAlternativas(alternativasBrutas);
-                questao.setAlternativas(alternativas);
+                questao.setAlternativasTexto(alternativas);
 
                 questao.setGabarito(Integer.parseInt(matcherQuestaoCompleta.group(4).trim()));
 

@@ -28,6 +28,13 @@ public class SecurityFilter extends OncePerRequestFilter {
 
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             String token = authorizationHeader.substring(7);
+
+            // Se o token foi revogado, bloqueia imediatamente
+            if (tokenService.isTokenRevoked(token)) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                return;
+            }
+
             String subject = tokenService.validarToken(token);
 
             if (subject != null && SecurityContextHolder.getContext().getAuthentication() == null) {

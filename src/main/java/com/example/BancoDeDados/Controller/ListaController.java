@@ -1,14 +1,17 @@
 package com.example.BancoDeDados.Controller;
 
-import com.example.BancoDeDados.Model.Disciplina;
 import com.example.BancoDeDados.Model.Estudante;
 import com.example.BancoDeDados.Model.Lista;
 import com.example.BancoDeDados.Model.Questao;
 import com.example.BancoDeDados.Repositores.ListaRepository;
 import com.example.BancoDeDados.Repositores.QuestaoRepositores;
+import com.example.BancoDeDados.Repositores.projections.QuestaoListProjection;
 import com.example.BancoDeDados.ResponseDTO.*;
 import com.example.BancoDeDados.Services.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -67,7 +70,6 @@ public class ListaController {
 
     // No ListaController.java - Método corrigido
     @GetMapping("/estudante/{estudanteId}/questoes")
-    @Transactional(readOnly = true)
     public ResponseEntity<List<QuestaoResponseDTO>> buscarQuestoesPorEstudante(@PathVariable UUID estudanteId) {
         try {
             List<QuestaoResponseDTO> questoes = listaService.buscarQuestoesPorEstudante(estudanteId);
@@ -136,7 +138,7 @@ public class ListaController {
                             questao.getId(),
                             questao.getCabecalho(),
                             questao.getEnunciado(),
-                            questao.getAlternativas(),
+                            questao.getAlternativasTexto(),
                             questao.getGabarito()
                     );
                 })
@@ -291,6 +293,32 @@ public class ListaController {
             return ResponseEntity.ok(disciplinas);
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
+        }
+    }
+
+    // Novo: Atualizar questão da lista (professor)
+    @PutMapping("/{listaId}/questoes/{questaoId}")
+    public ResponseEntity<QuestaoResponseDTO> atualizarQuestaoDaLista(@PathVariable UUID listaId,
+                                                                      @PathVariable Integer questaoId,
+                                                                      @RequestBody QuestaoRequestDTO req) {
+        try {
+            var dto = questaoService.atualizarQuestaoDaLista(listaId, questaoId, req);
+            return ResponseEntity.ok(dto);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    // Novo: Deletar questão da lista (professor)
+    @DeleteMapping("/{listaId}/questoes/{questaoId}")
+    public ResponseEntity<Void> deletarQuestaoDaLista(@PathVariable UUID listaId, @PathVariable Integer questaoId) {
+        try {
+            questaoService.deletarQuestaoDaLista(listaId, questaoId);
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
         }
     }
 }

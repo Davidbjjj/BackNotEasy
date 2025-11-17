@@ -36,7 +36,7 @@ public class TratarTextoIAService {
             questao.setEnunciado(enunciado);
 
             List<String> alternativas = pegarAlternativas(enunciadoCompleto);
-            questao.setAlternativas(alternativas);
+            questao.setAlternativasTexto(alternativas);
 
             int gabarito = identificarGabarito(enunciadoCompleto, alternativas);
             questao.setGabarito(gabarito);

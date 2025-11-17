@@ -72,154 +72,34 @@ public class RespostaEstudantesService {
                         enviarRespostaDTO.estudanteId()
                 );
 
-        RespostaEstudantes resposta;
-
-        if (respostaExistente.isPresent()) {
-            resposta = respostaExistente.get();
-            resposta.setAlternativa(enviarRespostaDTO.alternativa());
-        } else {
-            resposta = new RespostaEstudantes();
-            resposta.setQuestao(questao);
-            resposta.setEstudante(estudante);
-            resposta.setAlternativa(enviarRespostaDTO.alternativa());
-        }
-
+        RespostaEstudantes resposta = respostaExistente.orElseGet(() -> {
+            RespostaEstudantes r = new RespostaEstudantes();
+            r.setQuestao(questao);
+            r.setEstudante(estudante);
+            return r;
+        });
+        resposta.setAlternativa(enviarRespostaDTO.alternativa());
         resposta.setResposta(resposta.isCorreta());
 
         respostaEstudantesRepository.save(resposta);
 
-        respostaEstudantesRepository.save(resposta);
-
-
-        respostaEstudantesRepository.save(resposta);
-
-        // Agora temos o listaId diretamente do DTO
         notaListaService.atualizarNotaAposResposta(enviarRespostaDTO.listaId(), estudante.getId());
-        sincronizarComEventosAssociados(enviarRespostaDTO.listaId(), estudante.getId());;
-    }
-    private void sincronizarComEventosAssociados(UUID listaId, UUID estudanteId) {
-        try {
-            // Busca todos os eventos associados a esta lista
-            List<ListaEvento> listaEventos = listaEventoRepository.findByListaId(listaId);
-
-            for (ListaEvento listaEvento : listaEventos) {
-                Evento evento = listaEvento.getEvento();
-
-                // Sincroniza a nota deste estudante específico
-                sincronizarNotaEstudanteParaEvento(listaId, estudanteId, evento);
-            }
-        } catch (Exception e) {
-            System.err.println("Erro ao sincronizar com eventos: " + e.getMessage());
-        }
-    }
-    private void sincronizarNotaEstudanteParaEvento(UUID listaId, UUID estudanteId, Evento evento) {
-        try {
-            Optional<ListaEstudanteNota> notaListaOpt = notaListaService.buscarNotaEstudanteOptional(listaId, estudanteId);
-
-            if (notaListaOpt.isPresent()) {
-                ListaEstudanteNota notaLista = notaListaOpt.get();
-
-                NotaEvento notaEvento = notaEventoRepository.findByEstudanteIdAndEventoId(estudanteId, evento.getId())
-                        .orElseGet(() -> {
-                            NotaEvento novaNotaEvento = new NotaEvento();
-                            novaNotaEvento.setEstudante(estudanteRepository.getReferenceById(estudanteId));
-                            novaNotaEvento.setEvento(evento);
-                            novaNotaEvento.setProfessor(evento.getProfessor());
-                            novaNotaEvento.setStatusEntrega(NotaEvento.StatusEntrega.ENTREGUE);
-                            return novaNotaEvento;
-                        });
-
-                Double notaConvertida = converterNotaListaParaEvento(notaLista.getNota(), evento.getNotaMaxima());
-                notaEvento.setNota(notaConvertida);
-                notaEvento.setObservacao("Nota atualizada automaticamente da lista");
-
-                notaEventoRepository.save(notaEvento);
-            }
-        } catch (Exception e) {
-            System.err.println("Erro ao sincronizar nota do estudante " + estudanteId + " para evento: " + e.getMessage());
-        }
-    }
-    private Double converterNotaListaParaEvento(BigDecimal notaLista, Double notaMaximaEvento) {
-        if (notaLista == null) {
-            return null;
-        }
-
-        // Converte BigDecimal para double
-        double notaListaDouble = notaLista.doubleValue();
-
-        // Se a nota máxima do evento é 10, retorna direto
-        if (notaMaximaEvento == 10.0) {
-            return notaListaDouble;
-        }
-
-        // Faz a proporção: (notaLista / 10) * notaMaximaEvento
-        return (notaListaDouble / 10.0) * notaMaximaEvento;
-    }
-
-    // Versão alternativa se estiver usando Double na ListaEstudanteNota:
-    private Double converterNotaListaParaEvento(Double notaLista, Double notaMaximaEvento) {
-        if (notaLista == null) {
-            return null;
-        }
-
-        // Se a nota máxima do evento é 10, retorna direto
-        if (notaMaximaEvento == 10.0) {
-            return notaLista;
-        }
-
-        // Faz a proporção: (notaLista / 10) * notaMaximaEvento
-        return (notaLista / 10.0) * notaMaximaEvento;
-    }
-
-    public List<Integer> buscarQuestoesPorListaEEstudante(UUID listaId, UUID estudanteId) {
-        if (!estudanteRepository.existsById(estudanteId)) {
-            throw new IllegalArgumentException("Estudante não encontrado.");
-        }
-
-        return listaRepository.findById(listaId)
-                .map(lista -> lista.getQuestoes().stream()
-                        .map(Questao::getId)
-                        .collect(Collectors.toList()))
-                .orElseThrow(() -> new IllegalArgumentException("Lista não encontrada."));
-    }
-
-    /**
-     * Busca a resposta de um estudante para uma questão específica.
-     */
-    public RespostaEstudanteDTO buscarRespostaPorQuestaoEEstudante(Integer questaoId, UUID estudanteId) {
-        RespostaEstudantes resposta = respostaEstudantesRepository
-                .findByQuestaoIdAndEstudanteId(questaoId, estudanteId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Resposta não encontrada para a questão " + questaoId + " e estudante " + estudanteId
-                ));
-
-        return new RespostaEstudanteDTO(
-                resposta.getId(),
-                resposta.getQuestao().getId(),
-                resposta.getEstudante().getId(),
-                resposta.getAlternativa(),
-                resposta.isCorreta() // Campo calculado no backend
-        );
     }
 
     /**
      * Busca desempenho por lista
      */
     public List<DesempenhoEstudanteDTO> buscarDesempenhoPorLista(UUID listaId) {
+        // Buscar questões da lista
         List<Questao> questoesDaLista = questaoRepository.findByLista_Id(listaId);
 
-        System.out.println("🔍 Questões encontradas para a lista " + listaId + ": " + questoesDaLista);
-
         if (questoesDaLista.isEmpty()) {
-            System.out.println("⚠️ Nenhuma questão encontrada para a lista.");
             return Collections.emptyList();
         }
 
         List<Integer> questoesIds = questoesDaLista.stream()
                 .map(Questao::getId)
                 .collect(Collectors.toList());
-
-        System.out.println("🆔 IDs das questões na lista: " + questoesIds);
 
         List<DesempenhoEstudanteDTO> desempenho = respostaEstudantesRepository.findAll().stream()
                 .filter(resposta -> questoesIds.contains(resposta.getQuestao().getId()))
@@ -229,8 +109,6 @@ public class RespostaEstudantesService {
                         resposta.isCorreta() // Campo calculado no backend
                 ))
                 .collect(Collectors.toList());
-
-        System.out.println("📊 Desempenho calculado: " + desempenho);
 
         return desempenho;
     }
@@ -268,6 +146,26 @@ public class RespostaEstudantesService {
                 .count();
 
         return (double) respostasCorretas / respostas.size() * 100;
+    }
+
+    /**
+     * Busca resposta por questão e estudante
+     * Lança exceção se não encontrar
+     */
+    public RespostaEstudanteDTO buscarRespostaPorQuestaoEEstudante(Integer questaoId, UUID estudanteId) {
+        RespostaEstudantes resposta = respostaEstudantesRepository
+                .findByQuestaoIdAndEstudanteId(questaoId, estudanteId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Resposta não encontrada para a questão " + questaoId + " e estudante " + estudanteId
+                ));
+
+        return new RespostaEstudanteDTO(
+                resposta.getId(),
+                resposta.getQuestao().getId(),
+                resposta.getEstudante().getId(),
+                resposta.getAlternativa(),
+                resposta.isCorreta()
+        );
     }
 
     /**
@@ -342,6 +240,14 @@ public class RespostaEstudantesService {
 
         // Busca todas as questões da lista de uma vez
         List<Questao> questõesDaLista = questaoRepository.findByLista_Id(listaId);
+
+        // Inicializar alternativas dentro da transação
+        questõesDaLista.forEach(q -> {
+            if (q.getAlternativas() != null) {
+                q.getAlternativas().size();
+            }
+        });
+
         Map<Integer, Questao> questaoMap = questõesDaLista.stream()
                 .collect(Collectors.toMap(Questao::getId, q -> q));
 
@@ -350,8 +256,7 @@ public class RespostaEstudantesService {
                 .map(RespostaQuestaoDTO::questaoId)
                 .collect(Collectors.toList());
 
-        List<RespostaEstudantes> respostasExistentes = respostaEstudantesRepository
-                .findByEstudanteIdAndQuestaoIdIn(estudanteId, questaoIds);
+        List<RespostaEstudantes> respostasExistentes = respostaEstudantesRepository.findByEstudanteIdAndQuestaoIdIn(estudanteId, questaoIds);
 
         Map<Integer, RespostaEstudantes> respostaExistenteMap = respostasExistentes.stream()
                 .collect(Collectors.toMap(resposta -> resposta.getQuestao().getId(), resposta -> resposta));
@@ -389,3 +294,4 @@ public class RespostaEstudantesService {
     }
 
 }
+

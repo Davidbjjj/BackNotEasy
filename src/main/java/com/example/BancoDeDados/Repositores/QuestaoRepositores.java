@@ -9,19 +9,24 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface QuestaoRepositores extends JpaRepository<Questao,Integer> {
-    List<Questao> findByLista_Id(UUID listaId);
+public interface QuestaoRepositores extends JpaRepository<Questao, Integer> {
 
-    Optional<Questao> findById(Integer Questao);
+    //  Query simples - SEM carregar alternativas (para listagens básicas)
+    @Query("SELECT q FROM Questao q WHERE q.lista.id = :listaId ORDER BY q.id")
+    List<Questao> findByListaId(@Param("listaId") UUID listaId);
 
-    // Buscar questão específica por lista
-    @Query("SELECT q FROM Questao q WHERE q.id = :questaoId AND q.lista.id = :listaId")
-    List<Questao> findByListaIdAndQuestaoId(@Param("listaId") UUID listaId, @Param("questaoId") Integer questaoId);
+    //  Compatibilidade com código antigo
+    default List<Questao> findByLista_Id(UUID listaId) {
+        return findByListaId(listaId);
+    }
 
-    // Buscar questões com alternativas carregadas
-    @Query("SELECT DISTINCT q FROM Questao q LEFT JOIN FETCH q.alternativas WHERE q.lista.id = :listaId")
+    //  Com JOIN FETCH apenas quando necessário (usa relacionamento @OneToMany)
+    @Query("SELECT DISTINCT q FROM Questao q LEFT JOIN FETCH q.alternativas WHERE q.id = :id")
+    Optional<Questao> findByIdWithAlternativas(@Param("id") Integer id);
+
+    @Query("SELECT DISTINCT q FROM Questao q LEFT JOIN FETCH q.alternativas WHERE q.lista.id = :listaId ORDER BY q.id")
     List<Questao> findByListaIdWithAlternativas(@Param("listaId") UUID listaId);
 
-    // Contar questões por lista
-    long countByListaId(UUID listaId);
+    @Query("SELECT DISTINCT q FROM Questao q LEFT JOIN FETCH q.alternativas WHERE q.id IN :questaoIds ORDER BY q.id")
+    List<Questao> findAllByIdWithAlternativas(@Param("questaoIds") List<Integer> questaoIds);
 }
