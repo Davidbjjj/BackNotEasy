@@ -1,11 +1,8 @@
 package com.example.BancoDeDados.Services;
 
 import com.example.BancoDeDados.Model.*;
-//import com.example.BancoDeDados.Repositores.InstituicaoRepository;
 import com.example.BancoDeDados.Repositores.*;
-import com.example.BancoDeDados.ResponseDTO.DisciplinaRequestDTO;
-import com.example.BancoDeDados.ResponseDTO.DisciplinaResponseDTO;
-
+import com.example.BancoDeDados.ResponseDTO.*;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
@@ -23,19 +20,22 @@ public class DisciplinaService {
     private final EstudanteRepositores estudanteRepository;
     private final ListaRepository listaRepository;
     private final ListaService listaService;
+    private final RespostaEstudantesRepository respostaEstudantesRepository;
 
     public DisciplinaService(DisciplinaRepository disciplinaRepository,
                              ProfessorRepositores professorRepository,
                              InstituicaoRepository instituicaoRepository,
                              EstudanteRepositores estudanteRepository,
                              ListaRepository listaRepository,
-                             ListaService listaService) {
+                             ListaService listaService,
+                             RespostaEstudantesRepository respostaEstudantesRepository) {
         this.disciplinaRepository = disciplinaRepository;
         this.professorRepository = professorRepository;
         this.instituicaoRepository = instituicaoRepository;
         this.estudanteRepository = estudanteRepository;
         this.listaRepository=listaRepository;
         this.listaService=listaService;
+        this.respostaEstudantesRepository = respostaEstudantesRepository;
     }
 
     @Transactional
@@ -139,11 +139,19 @@ public class DisciplinaService {
 
         return mapToDTO(disciplina);
     }
-    public List<Estudante> listarEstudantes(UUID disciplinaId) {
+    public List<EstudanteSimplesDTO> listarEstudantes(UUID disciplinaId) {
         Disciplina disciplina = disciplinaRepository.findById(disciplinaId)
                 .orElseThrow(() -> new IllegalArgumentException("Disciplina não encontrada"));
 
-        return disciplina.getEstudantes().stream().collect(Collectors.toList());
+        return disciplina.getEstudantes().stream()
+                .map(e -> new EstudanteSimplesDTO(
+                        e.getId(),
+                        e.getNome(),
+                        e.getEmail(),
+                        e.getDataNascimento(),
+                        e.getInstituicao()
+                ))
+                .collect(Collectors.toList());
     }
     @Transactional
     public Disciplina criar(DisciplinaRequestDTO dto) {
@@ -207,5 +215,79 @@ public class DisciplinaService {
                 disciplina.getInstituicao().getNome(),
                 disciplina.getEstudantes().stream().map(Estudante::getNome).collect(Collectors.toList())
         );
+    }
+
+    // New: retorna média por estudante na disciplina
+    public List<AlunoMediaDTO> getAlunoMedias(UUID disciplinaId, UUID professorId) {
+        // valida disciplina e pertencimento ao professor
+        Disciplina disciplina = disciplinaRepository.findById(disciplinaId)
+                .orElseThrow(() -> new IllegalArgumentException("Disciplina não encontrada"));
+        if (disciplina.getProfessor() == null || !disciplina.getProfessor().getId().equals(professorId)) {
+            throw new IllegalArgumentException("Acesso negado: professor não é proprietário da disciplina");
+        }
+
+        List<AlunoMediaDTO> medias = respostaEstudantesRepository.findAlunoMediasByDisciplina(disciplinaId);
+        // converter média (0..1) para 0..100 e manter contagem
+        return medias.stream().map(m -> {
+            if (m.getMedia() != null) {
+                m.setMedia(Math.round(m.getMedia() * 10000.0) / 100.0); // 2 casas decimais
+            }
+            return m;
+        }).collect(Collectors.toList());
+    }
+
+    // New: listas com menores médias
+    public List<ListaMediaDTO> getListasMenoresMedias(UUID disciplinaId, UUID professorId) {
+        Disciplina disciplina = disciplinaRepository.findById(disciplinaId)
+                .orElseThrow(() -> new IllegalArgumentException("Disciplina não encontrada"));
+        if (disciplina.getProfessor() == null || !disciplina.getProfessor().getId().equals(professorId)) {
+            throw new IllegalArgumentException("Acesso negado: professor não é proprietário da disciplina");
+        }
+
+        List<ListaMediaDTO> listas = respostaEstudantesRepository.findListaMediasByDisciplinaOrderByMediaAsc(disciplinaId);
+        return listas.stream().map(l -> {
+            if (l.getMedia() != null) {
+                l.setMedia(Math.round(l.getMedia() * 10000.0) / 100.0);
+            }
+            return l;
+        }).collect(Collectors.toList());
+    }
+
+    // New: atividades concluidas por estudante na disciplina
+    public List<AtividadeConcluidaDTO> getAtividadesConcluidas(UUID disciplinaId, UUID professorId) {
+        Disciplina disciplina = disciplinaRepository.findById(disciplinaId)
+                .orElseThrow(() -> new IllegalArgumentException("Disciplina não encontrada"));
+        if (disciplina.getProfessor() == null || !disciplina.getProfessor().getId().equals(professorId)) {
+            throw new IllegalArgumentException("Acesso negado: professor não é proprietário da disciplina");
+        }
+
+        return respostaEstudantesRepository.findAtividadesConcluidasByDisciplina(disciplinaId);
+    }
+
+    // New: listar todas as atividades (listas) de uma disciplina
+    public List<ListaAtividadeDTO> listarAtividades(UUID disciplinaId) {
+        // Verifica se a disciplina existe
+        disciplinaRepository.findById(disciplinaId)
+                .orElseThrow(() -> new IllegalArgumentException("Disciplina não encontrada"));
+
+        List<Lista> listas = listaRepository.findByDisciplinaId(disciplinaId);
+
+        return listas.stream()
+                .map(lista -> {
+                    // Busca o eventoId associado à lista (se houver)
+                    UUID eventoId = null;
+                    if (lista.getEventos() != null && !lista.getEventos().isEmpty()) {
+                        // Pega o primeiro evento associado (normalmente há apenas um)
+                        eventoId = lista.getEventos().get(0).getEvento().getId();
+                    }
+
+                    return new ListaAtividadeDTO(
+                            eventoId,           // ID do evento (pode ser null)
+                            lista.getId(),      // ID da lista
+                            lista.getTitulo(),
+                            lista.getQuestoes() != null ? lista.getQuestoes().size() : 0
+                    );
+                })
+                .collect(Collectors.toList());
     }
 }
