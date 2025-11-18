@@ -6,6 +6,11 @@ import com.example.BancoDeDados.Repositores.DisciplinaRepository;
 import com.example.BancoDeDados.Repositores.EstudanteRepositores;
 import com.example.BancoDeDados.ResponseDTO.DisciplinaRequestDTO;
 import com.example.BancoDeDados.ResponseDTO.DisciplinaResponseDTO;
+import com.example.BancoDeDados.ResponseDTO.AlunoMediaDTO;
+import com.example.BancoDeDados.ResponseDTO.ListaMediaDTO;
+import com.example.BancoDeDados.ResponseDTO.AtividadeConcluidaDTO;
+import com.example.BancoDeDados.ResponseDTO.EstudanteSimplesDTO;
+import com.example.BancoDeDados.ResponseDTO.ListaAtividadeDTO;
 import com.example.BancoDeDados.Services.DisciplinaService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -142,10 +147,58 @@ public class DisciplinaController {
 
     // NOVO ENDPOINT: Listar estudantes da disciplina
     @GetMapping("/{disciplinaId}/estudantes")
-    public ResponseEntity<List<Estudante>> listarEstudantes(@PathVariable UUID disciplinaId) {
+    public ResponseEntity<List<EstudanteSimplesDTO>> listarEstudantes(@PathVariable UUID disciplinaId) {
         try {
-            List<Estudante> estudantes = disciplinaService.listarEstudantes(disciplinaId);
+            List<EstudanteSimplesDTO> estudantes = disciplinaService.listarEstudantes(disciplinaId);
             return ResponseEntity.ok(estudantes);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    // Analytics endpoints (professor-facing). For now professorId is required as query param to check ownership.
+    @GetMapping("/{disciplinaId}/analytics/alunos/medias")
+    public ResponseEntity<List<AlunoMediaDTO>> listarAlunoMedias(@PathVariable UUID disciplinaId,
+                                                                 @RequestParam UUID professorId) {
+        try {
+            List<AlunoMediaDTO> result = disciplinaService.getAlunoMedias(disciplinaId, professorId);
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            if (e.getMessage().contains("Acesso negado")) return ResponseEntity.status(403).build();
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/{disciplinaId}/analytics/listas/menor-media")
+    public ResponseEntity<List<ListaMediaDTO>> listarListasMenorMedia(@PathVariable UUID disciplinaId,
+                                                                      @RequestParam UUID professorId) {
+        try {
+            List<ListaMediaDTO> result = disciplinaService.getListasMenoresMedias(disciplinaId, professorId);
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            if (e.getMessage().contains("Acesso negado")) return ResponseEntity.status(403).build();
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/{disciplinaId}/analytics/atividades-concluidas")
+    public ResponseEntity<List<AtividadeConcluidaDTO>> listarAtividadesConcluidas(@PathVariable UUID disciplinaId,
+                                                                                 @RequestParam UUID professorId) {
+        try {
+            List<AtividadeConcluidaDTO> result = disciplinaService.getAtividadesConcluidas(disciplinaId, professorId);
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            if (e.getMessage().contains("Acesso negado")) return ResponseEntity.status(403).build();
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    // Listar todas as atividades (listas) de uma disciplina
+    @GetMapping("/{disciplinaId}/atividades")
+    public ResponseEntity<List<ListaAtividadeDTO>> listarAtividades(@PathVariable UUID disciplinaId) {
+        try {
+            List<ListaAtividadeDTO> atividades = disciplinaService.listarAtividades(disciplinaId);
+            return ResponseEntity.ok(atividades);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         }
