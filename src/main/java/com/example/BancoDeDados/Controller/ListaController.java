@@ -47,6 +47,9 @@ public class ListaController {
     @Autowired
     private NotaListaService notaListaService;
 
+    @Autowired
+    private QuestaoOtimizadoService questaoOtimizadoService;
+
     public ListaController(ListaService listaService) {
         this.listaService = listaService;
     }
@@ -118,31 +121,19 @@ public class ListaController {
     }
     @GetMapping("/{listaId}/questoes")
     @Transactional(readOnly = true)
-    public List<QuestaoResponseDTO> listarQuestoes(@PathVariable UUID listaId) {
-        // Use o método com JOIN FETCH para carregar as questões
-        Lista lista = listaRepository.findByIdWithQuestoes(listaId)
-                .orElseThrow(() -> new RuntimeException("Lista não encontrada"));
+    public List<com.example.BancoDeDados.dto.QuestaoComAlternativasDTO> listarQuestoes(@PathVariable UUID listaId) {
+        System.out.println("DEBUG - Buscando questões com imagens para lista ID: " + listaId);
 
-        System.out.println("DEBUG - Lista ID: " + listaId);
-        System.out.println("DEBUG - Número de questões encontradas: " + (lista.getQuestoes() != null ? lista.getQuestoes().size() : 0));
+        // Usar serviço otimizado que já retorna questões COM imagens
+        List<com.example.BancoDeDados.dto.QuestaoComAlternativasDTO> questoesDTO =
+            questaoOtimizadoService.buscarQuestoesComAlternativasPorLista(listaId);
 
-        if (lista.getQuestoes() == null || lista.getQuestoes().isEmpty()) {
-            System.out.println("DEBUG - Lista de questões está vazia ou nula");
-            return new ArrayList<>();
-        }
+        System.out.println("DEBUG - Total de questões retornadas: " + questoesDTO.size());
+        questoesDTO.forEach(q -> {
+            System.out.println("DEBUG - Questão " + q.getId() + " tem " +
+                (q.getImagens() != null ? q.getImagens().size() : 0) + " imagens");
+        });
 
-        List<QuestaoResponseDTO> questoesDTO = lista.getQuestoes().stream()
-                .map(questao -> {
-                    System.out.println("DEBUG - Processando questão ID: " + questao.getId());
-                    return new QuestaoResponseDTO(
-                            questao.getId(),
-                            questao.getCabecalho(),
-                            questao.getEnunciado(),
-                            questao.getAlternativasTexto(),
-                            questao.getGabarito()
-                    );
-                })
-                .collect(toList());
 
         System.out.println("DEBUG - Total de DTOs criados: " + questoesDTO.size());
         return questoesDTO;

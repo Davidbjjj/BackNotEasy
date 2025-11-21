@@ -44,6 +44,13 @@ public class Questao {
     @Builder.Default
     private List<QuestaoAlternativa> alternativas = new ArrayList<>();
 
+    // Relacionamento com imagens da questão
+    @OneToMany(mappedBy = "questao", fetch = FetchType.LAZY,
+               cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("ordem ASC")
+    @Builder.Default
+    private List<QuestaoImagem> imagens = new ArrayList<>();
+
     //  Helper method para adicionar alternativa
     public void addAlternativa(String texto, Integer ordem) {
         QuestaoAlternativa alt = QuestaoAlternativa.builder()

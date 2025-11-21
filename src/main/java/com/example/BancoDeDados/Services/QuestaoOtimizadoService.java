@@ -2,6 +2,7 @@ package com.example.BancoDeDados.Services;
 
 import com.example.BancoDeDados.Model.Questao;
 import com.example.BancoDeDados.Model.QuestaoAlternativa;
+import com.example.BancoDeDados.Model.QuestaoImagem;
 import com.example.BancoDeDados.Repositores.QuestaoAlternativaRepository;
 import com.example.BancoDeDados.Repositores.QuestaoRepositores;
 import com.example.BancoDeDados.dto.QuestaoComAlternativasDTO;
@@ -18,6 +19,7 @@ public class QuestaoOtimizadoService {
 
     private final QuestaoRepositores questaoRepositores;
     private final QuestaoAlternativaRepository alternativaRepository;
+    private final ImagemQuestaoService imagemService;
 
     /**
      * ✅ Busca questões com alternativas em 2 queries otimizadas
@@ -62,6 +64,7 @@ public class QuestaoOtimizadoService {
                             .build())
                         .collect(Collectors.toList())
                 )
+                .imagens(converterImagensParaDTO(q.getImagens()))
                 .build())
             .collect(Collectors.toList());
     }
@@ -95,6 +98,7 @@ public class QuestaoOtimizadoService {
                         .build())
                     .collect(Collectors.toList())
             )
+            .imagens(converterImagensParaDTO(q.getImagens()))
             .build());
     }
 
@@ -129,5 +133,22 @@ public class QuestaoOtimizadoService {
 
         return questaoRepositores.save(questao);
     }
-}
 
+    /**
+     * Converte lista de QuestaoImagem para ImagemDTO
+     */
+    private List<QuestaoComAlternativasDTO.ImagemDTO> converterImagensParaDTO(List<QuestaoImagem> imagens) {
+        return imagens.stream()
+            .map(img -> QuestaoComAlternativasDTO.ImagemDTO.builder()
+                .id(img.getId())
+                .urlPublica(img.getUrlPublica())
+                .nomeArquivo(img.getNomeArquivo())
+                .tipoMime(img.getTipoMime())
+                .ordem(img.getOrdem())
+                .textoOcr(img.getTextoOcr())
+                .exibirNoEnunciado(img.getExibirNoEnunciado() != null ? img.getExibirNoEnunciado() : true)
+                .exibirNasAlternativas(img.getExibirNasAlternativas() != null ? img.getExibirNasAlternativas() : false)
+                .build())
+            .collect(Collectors.toList());
+    }
+}
