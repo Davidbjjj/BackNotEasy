@@ -19,7 +19,6 @@ public class QuestaoOtimizadoService {
 
     private final QuestaoRepositores questaoRepositores;
     private final QuestaoAlternativaRepository alternativaRepository;
-    private final ImagemQuestaoService imagemService;
 
     /**
      * ✅ Busca questões com alternativas em 2 queries otimizadas
@@ -136,12 +135,13 @@ public class QuestaoOtimizadoService {
 
     /**
      * Converte lista de QuestaoImagem para ImagemDTO
+     * Gera URL pública dinamicamente baseado no nome do arquivo
      */
     private List<QuestaoComAlternativasDTO.ImagemDTO> converterImagensParaDTO(List<QuestaoImagem> imagens) {
         return imagens.stream()
             .map(img -> QuestaoComAlternativasDTO.ImagemDTO.builder()
                 .id(img.getId())
-                .urlPublica(img.getUrlPublica())
+                .urlPublica("/api/imagens/questao/" + img.getNomeArquivo())
                 .nomeArquivo(img.getNomeArquivo())
                 .tipoMime(img.getTipoMime())
                 .ordem(img.getOrdem())

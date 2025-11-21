@@ -47,6 +47,12 @@ public class DatabaseMigrationRunner implements ApplicationRunner {
             log.info("ℹ️ Tabela questao_alternativas já está no formato correto. Migração não necessária.");
         }
 
+        // ========================================
+        // MIGRAÇÃO: Remoção de colunas legado de imagens
+        // ========================================
+        log.info("Verificando colunas legado em questao_imagens...");
+        removerColunasLegadoImagens();
+
         log.info("========================================");
         log.info("Migrações concluídas!");
         log.info("========================================");
@@ -137,6 +143,33 @@ public class DatabaseMigrationRunner implements ApplicationRunner {
             }
 
             throw new RuntimeException("Falha na migração da tabela questao_alternativas", e);
+        }
+    }
+
+    private void removerColunasLegadoImagens() {
+        try {
+            // Backup opcional dos valores antigos antes de remover
+            apply("CREATE TABLE IF NOT EXISTS questao_imagens_backup_legacy AS SELECT id, caminho_arquivo, url_publica FROM questao_imagens WHERE 1=0");
+            Integer countLegacy = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.columns WHERE table_name='questao_imagens' AND column_name='caminho_arquivo'",
+                Integer.class
+            );
+            if (countLegacy != null && countLegacy > 0) {
+                log.info("Coluna caminho_arquivo encontrada. Removendo colunas legado (caminho_arquivo, url_publica)...");
+                // Opcional: copiar dados existentes para backup (apenas se quiser preservar)
+                apply("INSERT INTO questao_imagens_backup_legacy SELECT id, caminho_arquivo, url_publica FROM questao_imagens WHERE caminho_arquivo IS NOT NULL OR url_publica IS NOT NULL");
+                // Remover restrições NOT NULL para permitir alteração segura
+                apply("ALTER TABLE questao_imagens ALTER COLUMN caminho_arquivo DROP NOT NULL");
+                apply("ALTER TABLE questao_imagens ALTER COLUMN url_publica DROP NOT NULL");
+                // Dropar colunas
+                apply("ALTER TABLE questao_imagens DROP COLUMN IF EXISTS caminho_arquivo CASCADE");
+                apply("ALTER TABLE questao_imagens DROP COLUMN IF EXISTS url_publica CASCADE");
+                log.info("Colunas legado removidas com sucesso.");
+            } else {
+                log.info("Colunas legado já não existem. Nenhuma ação necessária.");
+            }
+        } catch (Exception e) {
+            log.warn("Falha ao remover colunas legado de imagens: {}", e.getMessage());
         }
     }
 

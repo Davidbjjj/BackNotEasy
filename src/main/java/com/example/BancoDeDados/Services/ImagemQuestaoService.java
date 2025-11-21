@@ -18,6 +18,8 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 /**
  * Serviço para gerenciar imagens de questões
@@ -30,19 +32,28 @@ public class ImagemQuestaoService {
 
     private final QuestaoImagemRepository imagemRepository;
 
-    @Value("${app.upload.dir:uploads/questoes}")
-    private String uploadDir;
-
-    @Value("${app.base-url:http://localhost:8080}")
-    private String baseUrl;
 
     public ImagemQuestaoService(QuestaoImagemRepository imagemRepository) {
         this.imagemRepository = imagemRepository;
     }
 
+    private String gerarEtag(byte[] dados, String nomeArquivo) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            md.update(dados);
+            md.update(nomeArquivo.getBytes());
+            byte[] hash = md.digest();
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hash) sb.append(String.format("%02x", b));
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            return UUID.randomUUID().toString();
+        }
+    }
+
     /**
      * Salva imagens associadas a uma questão
-     * Copia arquivos temporários para storage permanente
+     * Armazena as imagens diretamente no banco de dados
      */
     @Transactional
     public List<QuestaoImagem> salvarImagensQuestao(Questao questao,
@@ -50,13 +61,6 @@ public class ImagemQuestaoService {
                                                      List<String> textosOcr) throws IOException {
 
         List<QuestaoImagem> imagens = new ArrayList<>();
-
-        // Criar diretório de upload se não existir
-        Path uploadPath = Paths.get(uploadDir);
-        if (!Files.exists(uploadPath)) {
-            Files.createDirectories(uploadPath);
-            logger.info("Diretório de upload criado: {}", uploadPath.toAbsolutePath());
-        }
 
         for (int i = 0; i < caminhoTemporarios.size(); i++) {
             String caminhoTemp = caminhoTemporarios.get(i);
@@ -67,47 +71,42 @@ public class ImagemQuestaoService {
                 continue;
             }
 
-            // Gerar nome único para o arquivo
+            // Ler dados da imagem
+            byte[] dadosImagem = Files.readAllBytes(arquivoTemp.toPath());
+
+            // Gerar nome único para referência
             String nomeOriginal = arquivoTemp.getName();
             String extensao = nomeOriginal.substring(nomeOriginal.lastIndexOf('.'));
             String nomeUnico = UUID.randomUUID().toString() + extensao;
-
-            // Copiar para storage permanente
-            Path destino = uploadPath.resolve(nomeUnico);
-            Files.copy(arquivoTemp.toPath(), destino, StandardCopyOption.REPLACE_EXISTING);
-
-            // Gerar URL pública
-            String urlPublica = baseUrl + "/api/imagens/questao/" + nomeUnico;
 
             // Analisar texto OCR para detectar onde exibir a imagem
             String textoOcr = i < textosOcr.size() ? textosOcr.get(i) : "";
             DeteccaoExibicao deteccao = detectarOndeExibir(textoOcr, questao.getEnunciado());
 
-            // Criar registro no banco
+            // Criar registro no banco com dados da imagem
             QuestaoImagem imagem = QuestaoImagem.builder()
                 .questao(questao)
                 .nomeArquivo(nomeUnico)
-                .caminhoArquivo(destino.toAbsolutePath().toString())
-                .urlPublica(urlPublica)
+                .dadosImagem(dadosImagem)
                 .tipoMime(detectarMimeType(nomeOriginal))
-                .tamanhoBytes(arquivoTemp.length())
+                .tamanhoBytes((long) dadosImagem.length)
                 .ordem(i)
                 .textoOcr(textoOcr)
                 .exibirNoEnunciado(deteccao.exibirNoEnunciado)
                 .exibirNasAlternativas(deteccao.exibirNasAlternativas)
+                .etag(gerarEtag(dadosImagem, nomeUnico))
                 .build();
 
             imagens.add(imagem);
 
-            logger.debug("Imagem {} configurada: enunciado={}, alternativas={}",
-                        nomeUnico, deteccao.exibirNoEnunciado, deteccao.exibirNasAlternativas);
-
-            logger.debug("Imagem copiada: {} -> {}", caminhoTemp, destino);
+            logger.debug("Imagem {} configurada: enunciado={}, alternativas={}, tamanho={}KB",
+                        nomeUnico, deteccao.exibirNoEnunciado, deteccao.exibirNasAlternativas,
+                        dadosImagem.length / 1024);
         }
 
         // Salvar no banco
         List<QuestaoImagem> salvas = imagemRepository.saveAll(imagens);
-        logger.info("Salvas {} imagens para questão ID {}", salvas.size(), questao.getId());
+        logger.info("Salvas {} imagens no banco para questão ID {}", salvas.size(), questao.getId());
 
         return salvas;
     }
@@ -126,20 +125,9 @@ public class ImagemQuestaoService {
     public void deletarImagensQuestao(Integer questaoId) {
         List<QuestaoImagem> imagens = imagemRepository.findByQuestaoIdOrderByOrdemAsc(questaoId);
 
-        // Deletar arquivos físicos
-        for (QuestaoImagem imagem : imagens) {
-            try {
-                Path caminho = Paths.get(imagem.getCaminhoArquivo());
-                Files.deleteIfExists(caminho);
-                logger.debug("Arquivo deletado: {}", caminho);
-            } catch (IOException e) {
-                logger.error("Erro ao deletar arquivo: {}", imagem.getCaminhoArquivo(), e);
-            }
-        }
-
-        // Deletar registros do banco
+        // Deletar registros do banco (imagens são deletadas automaticamente)
         imagemRepository.deleteByQuestaoId(questaoId);
-        logger.info("Deletadas {} imagens da questão ID {}", imagens.size(), questaoId);
+        logger.info("Deletadas {} imagens da questão ID {} do banco de dados", imagens.size(), questaoId);
     }
 
     /**
@@ -156,11 +144,8 @@ public class ImagemQuestaoService {
         Questao questao = new Questao();
         questao.setId(questaoId); // Simplificado, em produção buscar do repository
 
-        // Criar diretório se não existir
-        Path uploadPath = Paths.get(uploadDir);
-        if (!Files.exists(uploadPath)) {
-            Files.createDirectories(uploadPath);
-        }
+        // Ler dados da imagem
+        byte[] dadosImagem = file.getBytes();
 
         // Gerar nome único
         String nomeOriginal = file.getOriginalFilename();
@@ -169,31 +154,28 @@ public class ImagemQuestaoService {
             : ".png";
         String nomeUnico = UUID.randomUUID().toString() + extensao;
 
-        // Salvar arquivo
-        Path destino = uploadPath.resolve(nomeUnico);
-        Files.copy(file.getInputStream(), destino, StandardCopyOption.REPLACE_EXISTING);
-
         // Determinar ordem se não fornecida
         if (ordem == null) {
             List<QuestaoImagem> existentes = imagemRepository.findByQuestaoIdOrderByOrdemAsc(questaoId);
             ordem = existentes.isEmpty() ? 0 : existentes.get(existentes.size() - 1).getOrdem() + 1;
         }
 
-        // Criar registro
+        // Criar registro com dados da imagem
         QuestaoImagem imagem = QuestaoImagem.builder()
             .questao(questao)
             .nomeArquivo(nomeUnico)
-            .caminhoArquivo(destino.toAbsolutePath().toString())
-            .urlPublica(baseUrl + "/api/imagens/questao/" + nomeUnico)
+            .dadosImagem(dadosImagem)
             .tipoMime(file.getContentType() != null ? file.getContentType() : detectarMimeType(nomeOriginal))
             .tamanhoBytes(file.getSize())
             .ordem(ordem)
             .exibirNoEnunciado(exibirNoEnunciado != null ? exibirNoEnunciado : true)
             .exibirNasAlternativas(exibirNasAlternativas != null ? exibirNasAlternativas : false)
+            .etag(gerarEtag(dadosImagem, nomeUnico))
             .build();
 
         QuestaoImagem salva = imagemRepository.save(imagem);
-        logger.info("Imagem manual adicionada à questão {}: {}", questaoId, nomeUnico);
+        logger.info("Imagem manual adicionada no banco à questão {}: {} ({}KB)",
+                   questaoId, nomeUnico, dadosImagem.length / 1024);
 
         return salva;
     }
@@ -231,23 +213,13 @@ public class ImagemQuestaoService {
      * Deleta uma imagem específica
      */
     @Transactional
-    public void deletarImagem(Long imagemId) throws IOException {
+    public void deletarImagem(Long imagemId) {
         QuestaoImagem imagem = imagemRepository.findById(imagemId)
             .orElseThrow(() -> new RuntimeException("Imagem não encontrada: " + imagemId));
 
-        // Deletar arquivo físico
-        try {
-            Path caminho = Paths.get(imagem.getCaminhoArquivo());
-            Files.deleteIfExists(caminho);
-            logger.info("Arquivo deletado: {}", caminho);
-        } catch (IOException e) {
-            logger.error("Erro ao deletar arquivo físico: {}", imagem.getCaminhoArquivo(), e);
-            throw e;
-        }
-
-        // Deletar registro do banco
+        // Deletar registro do banco (dados da imagem são deletados automaticamente)
         imagemRepository.deleteById(imagemId);
-        logger.info("Imagem {} removida da questão {}", imagemId, imagem.getQuestao().getId());
+        logger.info("Imagem {} removida da questão {} do banco de dados", imagemId, imagem.getQuestao().getId());
     }
 
     /**
@@ -263,16 +235,11 @@ public class ImagemQuestaoService {
     }
 
     /**
-     * Carrega arquivo físico da imagem
+     * Carrega dados da imagem do banco de dados
      */
-    public Path carregarImagem(String nomeArquivo) throws IOException {
-        Path caminho = Paths.get(uploadDir).resolve(nomeArquivo);
-
-        if (!Files.exists(caminho)) {
-            throw new IOException("Arquivo não encontrado: " + nomeArquivo);
-        }
-
-        return caminho;
+    public QuestaoImagem carregarImagem(String nomeArquivo) {
+        return imagemRepository.findByNomeArquivo(nomeArquivo)
+            .orElseThrow(() -> new RuntimeException("Imagem não encontrada: " + nomeArquivo));
     }
 
     /**
