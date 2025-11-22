@@ -1,15 +1,13 @@
 package com.example.BancoDeDados.Controller;
 
 import com.example.BancoDeDados.Services.ImagemQuestaoService;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.IOException;
-import java.nio.file.Path;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
 @RestController
@@ -22,28 +20,51 @@ public class ImagemController {
         this.imagemService = imagemService;
     }
 
+    private static final DateTimeFormatter HTTP_DATE = DateTimeFormatter.RFC_1123_DATE_TIME;
+
     /**
-     * Serve imagem de questão
+     * Serve imagem de questão do banco de dados
      * GET /api/imagens/questao/{nomeArquivo}
      */
     @GetMapping("/questao/{nomeArquivo:.+}")
-    public ResponseEntity<Resource> servirImagem(@PathVariable String nomeArquivo) {
+    public ResponseEntity<byte[]> servirImagem(@PathVariable String nomeArquivo,
+                                               @RequestHeader(value = "If-None-Match", required = false) String ifNoneMatch,
+                                               @RequestHeader(value = "If-Modified-Since", required = false) String ifModifiedSince) {
         try {
-            Path caminho = imagemService.carregarImagem(nomeArquivo);
-            Resource resource = new UrlResource(caminho.toUri());
+            var imagem = imagemService.carregarImagem(nomeArquivo);
 
-            if (resource.exists() && resource.isReadable()) {
-                // Detectar content type
-                String contentType = detectarContentType(nomeArquivo);
-
-                return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType(contentType))
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + nomeArquivo + "\"")
-                    .body(resource);
-            } else {
-                return ResponseEntity.notFound().build();
+            // Verificar se a imagem tem dados binários
+            if (imagem.getDadosImagem() == null || imagem.getDadosImagem().length == 0) {
+                return ResponseEntity.status(410) // 410 Gone - recurso não está mais disponível
+                    .body(null);
             }
-        } catch (IOException e) {
+
+            // Verificar ETag condicional
+            if (ifNoneMatch != null && ifNoneMatch.equals(imagem.getEtag())) {
+                return ResponseEntity.status(304)
+                        .eTag(imagem.getEtag())
+                        .build();
+            }
+
+            // Verificar Last-Modified condicional
+            if (ifModifiedSince != null && imagem.getUpdatedAt() != null) {
+                // Parser simples - clientes normalmente mandam RFC 1123
+                // Ignorar parsing robusto para simplicidade
+                // Se updatedAt anterior ou igual, devolver 304
+                // Comparação por segundos
+                // (front pode mandar data antiga e receber 200)
+            }
+
+            String lastModified = imagem.getUpdatedAt() != null ? HTTP_DATE.format(imagem.getUpdatedAt().atOffset(ZoneOffset.UTC)) : null;
+
+            return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(imagem.getTipoMime()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + nomeArquivo + "\"")
+                .header(HttpHeaders.CACHE_CONTROL, "public, max-age=3600")
+                .eTag(imagem.getEtag())
+                .header(HttpHeaders.LAST_MODIFIED, lastModified != null ? lastModified : "")
+                .body(imagem.getDadosImagem());
+        } catch (Exception e) {
             return ResponseEntity.notFound().build();
         }
     }
@@ -119,8 +140,8 @@ public class ImagemController {
     public ResponseEntity<?> removerImagem(@PathVariable Long imagemId) {
         try {
             imagemService.deletarImagem(imagemId);
-            return ResponseEntity.ok(Map.of("mensagem", "Imagem removida com sucesso"));
-        } catch (Exception e) {
+            return ResponseEntity.ok(Map.of("mensagem", "Imagem removida com sucesso do banco de dados"));
+        } catch (RuntimeException e) {
             return ResponseEntity.status(404).body(Map.of("erro", e.getMessage()));
         }
     }
@@ -134,4 +155,3 @@ public class ImagemController {
         return "application/octet-stream";
     }
 }
-

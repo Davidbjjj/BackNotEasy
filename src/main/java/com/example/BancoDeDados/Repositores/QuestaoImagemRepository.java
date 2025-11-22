@@ -12,5 +12,7 @@ public interface QuestaoImagemRepository extends JpaRepository<QuestaoImagem, Lo
     List<QuestaoImagem> findByQuestaoIdOrderByOrdemAsc(Integer questaoId);
 
     void deleteByQuestaoId(Integer questaoId);
+
+    java.util.Optional<QuestaoImagem> findByNomeArquivo(String nomeArquivo);
 }
 
