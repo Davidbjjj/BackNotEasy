@@ -493,4 +493,73 @@ public class EventoService {
         return listaRepository.findById(listaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Lista não encontrada"));
     }
+
+    @Transactional(readOnly = true)
+    public com.example.BancoDeDados.ResponseDTO.EventoStatusResponse obterStatusENotaPorEventoEEstudante(UUID eventoId, UUID estudanteId) {
+        // Busca o DTO de detalhes para informações de título/descrição/listas
+        EventoDetalhesResponse eventoDTO = buscarPorId(eventoId);
+
+        // Busca entidades para consultas diretas (notaEvento, etc)
+        Evento eventoEntity = findEventoByIdOrThrow(eventoId);
+        Estudante estudante = null;
+        try {
+            estudante = findEstudanteByIdOrThrow(estudanteId);
+        } catch (Exception e) {
+            // estudante pode não estar vinculado ao evento; continuamos apenas com DTO
+        }
+
+        com.example.BancoDeDados.ResponseDTO.EventoStatusResponse resp = new com.example.BancoDeDados.ResponseDTO.EventoStatusResponse();
+        resp.setIdEvento(eventoDTO.idEvento());
+        resp.setNomeEvento(eventoDTO.nomeEvento());
+        resp.setPrazo(eventoDTO.prazo());
+        resp.setDescricao(eventoDTO.descricao());
+        resp.setNomeDisciplina(eventoDTO.disciplina() != null ? eventoDTO.disciplina().nome() : null);
+
+        // valores padrão
+        resp.setNotaDoAluno("");
+        resp.setStatus("pendente");
+
+        // Primeiro, se possível, checar se existe uma NotaEvento já associada ao estudante
+        if (estudante != null) {
+            try {
+                java.util.Optional<NotaEvento> notaEventoOpt = notaEventoRepository.findByEstudanteAndEvento(estudante, eventoEntity);
+                if (notaEventoOpt != null && notaEventoOpt.isPresent()) {
+                    NotaEvento ne = notaEventoOpt.get();
+                    if (ne.getNota() != null) {
+                        resp.setNotaDoAluno(ne.getNota().toString());
+                    }
+                    if (ne.getStatusEntrega() != null) {
+                        resp.setStatus(ne.getStatusEntrega() == NotaEvento.StatusEntrega.ENTREGUE ? "entregue" : ne.getStatusEntrega().name().toLowerCase());
+                    } else if (ne.getNota() != null) {
+                        resp.setStatus("entregue");
+                    }
+                    return resp;
+                }
+            } catch (Exception e) {
+                // ignorar e continuar para checar listas
+            }
+        }
+
+        // Se não encontrou NotaEvento, verificar listas associadas e usar a nota da lista
+        if (eventoDTO.listas() != null) {
+            for (var listaSimple : eventoDTO.listas()) {
+                try {
+                    java.util.UUID listaId = listaSimple.idLista();
+                    var notaListaOpt = notaListaService.buscarNotaEstudanteOptional(listaId, estudanteId);
+                    if (notaListaOpt != null && notaListaOpt.isPresent()) {
+                        var notaLista = notaListaOpt.get();
+                        if (notaLista.getNota() != null) {
+                            resp.setNotaDoAluno(notaLista.getNota().toPlainString());
+                            resp.setStatus("entregue");
+                            break;
+                        }
+                    }
+                } catch (Exception e) {
+                    // ignora listas problemáticas
+                }
+            }
+        }
+
+        return resp;
+    }
 }

@@ -164,4 +164,12 @@ public class EventoController {
         // Por enquanto, vamos retornar o que temos e ajustar depois.
         return ResponseEntity.ok(respostas);
     }
+
+    @GetMapping("/{eventoId}/alunos/{estudanteId}/resumo")
+    public ResponseEntity<com.example.BancoDeDados.ResponseDTO.EventoStatusResponse> obterResumoEventoParaEstudante(
+            @PathVariable UUID eventoId,
+            @PathVariable UUID estudanteId) {
+        com.example.BancoDeDados.ResponseDTO.EventoStatusResponse response = service.obterStatusENotaPorEventoEEstudante(eventoId, estudanteId);
+        return ResponseEntity.ok(response);
+    }
 }
