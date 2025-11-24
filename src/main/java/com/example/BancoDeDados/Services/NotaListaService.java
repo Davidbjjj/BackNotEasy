@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -46,20 +47,20 @@ public class NotaListaService {
                 .findByEstudanteIdAndQuestaoListaId(estudanteId, listaId);
 
         int totalQuestoes = lista.getQuestoes().size();
-        int questõesRespondidas = respostas.size();
-        int questõesCorretas = (int) respostas.stream()
+        int questoesRespondidas = respostas.size();
+        int questoesCorretas = (int) respostas.stream()
                 .filter(RespostaEstudantes::isCorreta)
                 .count();
 
         // Calcula porcentagem de acertos
         BigDecimal porcentagemAcertos = totalQuestoes > 0 ?
-                new BigDecimal(questõesCorretas)
-                        .divide(new BigDecimal(totalQuestoes), 4, BigDecimal.ROUND_HALF_UP)
-                        .multiply(new BigDecimal(100)) :
+                BigDecimal.valueOf(questoesCorretas)
+                        .divide(BigDecimal.valueOf(totalQuestoes), 4, RoundingMode.HALF_UP)
+                        .multiply(BigDecimal.valueOf(100)) :
                 BigDecimal.ZERO;
 
         // Calcula a nota (92% = 9.2)
-        BigDecimal nota = porcentagemAcertos.divide(new BigDecimal(10), 2, BigDecimal.ROUND_HALF_UP);
+        BigDecimal nota = porcentagemAcertos.divide(BigDecimal.TEN, 2, RoundingMode.HALF_UP);
 
         // Busca ou cria o registro de nota
         ListaEstudanteNota listaEstudanteNota = listaEstudanteNotaRepository
@@ -70,10 +71,14 @@ public class NotaListaService {
         listaEstudanteNota.setEstudante(estudante);
         listaEstudanteNota.setNota(nota);
         listaEstudanteNota.setPorcentagemAcertos(porcentagemAcertos);
-        listaEstudanteNota.setQuestõesRespondidas(questõesRespondidas);
-        listaEstudanteNota.setQuestõesCorretas(questõesCorretas);
+        listaEstudanteNota.setQuestoesRespondidas(questoesRespondidas);
+        listaEstudanteNota.setQuestoesCorretas(questoesCorretas);
         listaEstudanteNota.setTotalQuestoes(totalQuestoes);
-
+        // Não altera finalizada aqui; apenas garante que permanece false até aluno finalizar explicitamente
+        if (listaEstudanteNota.isFinalizada() && questoesRespondidas < totalQuestoes) {
+            // Se por algum motivo finalizada está true mas perdeu questões (inconsistência), volta para false
+            listaEstudanteNota.setFinalizada(false);
+        }
         return listaEstudanteNotaRepository.save(listaEstudanteNota);
     }
     public Optional<ListaEstudanteNota> buscarNotaEstudanteOptional(UUID listaId, UUID estudanteId) {
@@ -216,9 +221,9 @@ public class NotaListaService {
 
         // Calcula porcentagem de acertos geral
         BigDecimal porcentagemAcertosGeral = totalRespostas > 0 ?
-                new BigDecimal(totalAcertos)
-                        .divide(new BigDecimal(totalRespostas), 4, BigDecimal.ROUND_HALF_UP)
-                        .multiply(new BigDecimal(100)) :
+                BigDecimal.valueOf(totalAcertos)
+                        .divide(BigDecimal.valueOf(totalRespostas), 4, RoundingMode.HALF_UP)
+                        .multiply(BigDecimal.valueOf(100)) :
                 BigDecimal.ZERO;
 
         // Calcula nota média geral
@@ -240,7 +245,7 @@ public class NotaListaService {
             }
 
             if (estudantesComNota > 0) {
-                notaMediaGeral = somaNotas.divide(new BigDecimal(estudantesComNota), 2, BigDecimal.ROUND_HALF_UP);
+                notaMediaGeral = somaNotas.divide(BigDecimal.valueOf(estudantesComNota), 2, RoundingMode.HALF_UP);
             }
         }
 
@@ -291,9 +296,9 @@ public class NotaListaService {
 
         // Calcula porcentagem de acertos geral
         BigDecimal porcentagemAcertos = totalRespostas > 0 ?
-                new BigDecimal(totalQuestoesCorretas)
-                        .divide(new BigDecimal(totalRespostas), 4, BigDecimal.ROUND_HALF_UP)
-                        .multiply(new BigDecimal(100)) :
+                BigDecimal.valueOf(totalQuestoesCorretas)
+                        .divide(BigDecimal.valueOf(totalRespostas), 4, RoundingMode.HALF_UP)
+                        .multiply(BigDecimal.valueOf(100)) :
                 BigDecimal.ZERO;
 
         // Calcula nota geral (média das notas dos estudantes)
@@ -315,7 +320,7 @@ public class NotaListaService {
             }
 
             if (estudantesComNota > 0) {
-                notaGeral = somaNotas.divide(new BigDecimal(estudantesComNota), 2, BigDecimal.ROUND_HALF_UP);
+                notaGeral = somaNotas.divide(BigDecimal.valueOf(estudantesComNota), 2, RoundingMode.HALF_UP);
             }
         }
 
@@ -327,24 +332,24 @@ public class NotaListaService {
         private final BigDecimal notaLista;
         private final BigDecimal porcentagemAcertos;
         private final Integer totalQuestoes;
-        private final Integer questõesRespondidas;
-        private final Integer questõesCorretas;
+        private final Integer questoesRespondidas;
+        private final Integer questoesCorretas;
 
         public EstatisticasLista(BigDecimal notaLista, BigDecimal porcentagemAcertos,
-                                 Integer totalQuestoes, Integer questõesRespondidas, Integer questõesCorretas) {
+                                 Integer totalQuestoes, Integer questoesRespondidas, Integer questoesCorretas) {
             this.notaLista = notaLista;
             this.porcentagemAcertos = porcentagemAcertos;
             this.totalQuestoes = totalQuestoes;
-            this.questõesRespondidas = questõesRespondidas;
-            this.questõesCorretas = questõesCorretas;
+            this.questoesRespondidas = questoesRespondidas;
+            this.questoesCorretas = questoesCorretas;
         }
 
         // Getters
         public BigDecimal getNotaLista() { return notaLista; }
         public BigDecimal getPorcentagemAcertos() { return porcentagemAcertos; }
         public Integer getTotalQuestoes() { return totalQuestoes; }
-        public Integer getQuestoesRespondidas() { return questõesRespondidas; }
-        public Integer getQuestoesCorretas() { return questõesCorretas; }
+        public Integer getQuestoesRespondidas() { return questoesRespondidas; }
+        public Integer getQuestoesCorretas() { return questoesCorretas; }
     }
     public RespostasListaComNotaDTO buscarRespostasPorListaComNotaPorEstudante(UUID listaId, UUID estudanteId) {
         // Primeiro, verifica se a lista existe
@@ -384,8 +389,32 @@ public class NotaListaService {
                 notaEstudante.getNota(),
                 notaEstudante.getPorcentagemAcertos(),
                 notaEstudante.getTotalQuestoes(),
-                notaEstudante.getQuestõesRespondidas(),
-                notaEstudante.getQuestõesCorretas()
+                notaEstudante.getQuestoesRespondidas(),
+                notaEstudante.getQuestoesCorretas()
         );
+     }
+
+    /**
+     * Verifica se o estudante já respondeu pelo menos uma questão da lista
+     */
+    public boolean alunoRespondeuLista(UUID listaId, UUID estudanteId) {
+        return !respostaEstudantesRepository.findByEstudanteIdAndQuestaoListaId(estudanteId, listaId).isEmpty();
+    }
+
+    /**
+     * Finaliza a lista para o aluno se todas as questões foram respondidas.
+     */
+    public ListaEstudanteNota finalizarListaAluno(UUID listaId, UUID estudanteId) {
+        Lista lista = listaRepository.findById(listaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Lista não encontrada"));
+        ListaEstudanteNota nota = buscarNotaEstudante(listaId, estudanteId);
+        if (nota.getQuestoesRespondidas() == null || nota.getTotalQuestoes() == null) {
+            throw new RuntimeException("Dados de questões incompletos para finalizar");
+        }
+        if (nota.getQuestoesRespondidas() < nota.getTotalQuestoes()) {
+            throw new RuntimeException("Ainda existem questões não respondidas. Responda todas para finalizar.");
+        }
+        nota.setFinalizada(true);
+        return listaEstudanteNotaRepository.save(nota);
     }
 }

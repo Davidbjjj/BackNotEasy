@@ -34,11 +34,14 @@ public class ListaEstudanteNota {
     private BigDecimal porcentagemAcertos;
 
     @Column(name = "questoes_respondidas")
-    private Integer questõesRespondidas;
+    private Integer questoesRespondidas;
 
     @Column(name = "questoes_corretas")
-    private Integer questõesCorretas;
+    private Integer questoesCorretas;
 
     @Column(name = "total_questoes")
     private Integer totalQuestoes;
+
+    @Column(name = "finalizada", nullable = false, columnDefinition = "boolean default false")
+    private boolean finalizada = false;
 }

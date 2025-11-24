@@ -19,6 +19,6 @@ public class RespostasListaComNotaDTO {
     private BigDecimal notaLista; // Novo campo
     private BigDecimal porcentagemAcertos; // Opcional
     private Integer totalQuestoes;
-    private Integer questõesRespondidas;
-    private Integer questõesCorretas;
+    private Integer questoesRespondidas;
+    private Integer questoesCorretas;
 }

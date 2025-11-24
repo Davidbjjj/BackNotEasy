@@ -16,7 +16,7 @@ public class NotaListaDTO {
     private String nomeEstudante;
     private Double nota;
     private Double porcentagemAcertos;
-    private Integer questõesRespondidas;
-    private Integer questõesCorretas;
+    private Integer questoesRespondidas;
+    private Integer questoesCorretas;
     private Integer totalQuestoes;
 }

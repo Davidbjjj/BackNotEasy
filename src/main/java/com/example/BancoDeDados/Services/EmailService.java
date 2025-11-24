@@ -5,6 +5,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class EmailService {
@@ -12,11 +14,16 @@ public class EmailService {
     @Autowired
     private JavaMailSender mailSender;
 
-    @Value("${spring.mail.username}")
+    private static final Logger log = LoggerFactory.getLogger(EmailService.class);
+
+    @Value("${spring.mail.username:}")
     private String remetente;
 
     public String enviarEmail(String para, String assunto, String mensagem) {
-
+        if (remetente == null || remetente.isBlank()) {
+            log.debug("EmailService desativado - remetente não configurado");
+            return "Email desativado";
+        }
         try {
             SimpleMailMessage email = new SimpleMailMessage();
             email.setFrom(remetente);
@@ -26,10 +33,16 @@ public class EmailService {
             mailSender.send(email);
             return "Email enviado";
         } catch (Exception e) {
+            log.error("Erro ao enviar email: {}", e.getMessage(), e);
             return "Erro ao enviar email!" + e.getLocalizedMessage();
         }
     }
+
     public void sendPasswordResetEmail(String toEmail, String token) {
+        if (remetente == null || remetente.isBlank()) {
+            log.debug("Email de recuperação não enviado: remetente não configurado");
+            return;
+        }
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(remetente);
         message.setTo(toEmail);
@@ -40,7 +53,10 @@ public class EmailService {
                         "Este token expira em 15 minutos.\n\n" +
                         "Se você não solicitou esta recuperação, ignore este email."
         );
-
-        mailSender.send(message);
+        try {
+            mailSender.send(message);
+        } catch (Exception e) {
+            log.error("Erro ao enviar email de recuperação: {}", e.getMessage(), e);
+        }
     }
 }
