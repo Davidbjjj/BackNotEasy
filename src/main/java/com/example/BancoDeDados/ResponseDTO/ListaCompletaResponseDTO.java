@@ -11,13 +11,38 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ListaCompletaResponseDTO {
-    private Integer id;
+    private UUID id;
     private String titulo;
     private String professorNome;
-    private List<QuestaoResponseDTO> questões;
+    private List<QuestaoResponseDTO> questoes;
     private Integer totalQuestoes;
 
     public ListaCompletaResponseDTO(UUID id, String titulo, String nome, List<QuestaoResponseDTO> questaoDTOs) {
+        this.id = id;
+        this.titulo = titulo;
+        this.professorNome = nome;
+        this.questoes = questaoDTOs;
+        this.totalQuestoes = questaoDTOs != null ? questaoDTOs.size() : 0;
+    }
 
+    // Explicit getters (help static analysis that may not process Lombok)
+    public UUID getId() {
+        return id;
+    }
+
+    public String getTitulo() {
+        return titulo;
+    }
+
+    public String getProfessorNome() {
+        return professorNome;
+    }
+
+    public List<QuestaoResponseDTO> getQuestoes() {
+        return questoes;
+    }
+
+    public Integer getTotalQuestoes() {
+        return totalQuestoes;
     }
 }

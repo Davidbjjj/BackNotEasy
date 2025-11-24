@@ -13,7 +13,9 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -40,6 +42,9 @@ public class ListaService {
 
     @Autowired
     private ListaEstudanteNotaRepository listaEstudanteNotaRepository;
+
+    @Autowired
+    private QuestaoOtimizadoService questaoOtimizadoService;
 
     public List<AlunoNotaDTO> getNotasByListaId(UUID listaId) {
         List<ListaEstudanteNota> notas = listaEstudanteNotaRepository.findByListaId(listaId);
@@ -531,6 +536,28 @@ public class ListaService {
         );
     }
 
+    /**
+     * Busca lista completa COM IMAGENS das questões (para visão do aluno)
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> buscarListaCompletaComImagens(UUID listaId) {
+        Lista lista = listaRepository.findById(listaId)
+                .orElseThrow(() -> new RuntimeException("Lista não encontrada"));
+
+        // Usar serviço otimizado que já carrega imagens
+        List<com.example.BancoDeDados.dto.QuestaoComAlternativasDTO> questoesComImagens =
+                questaoOtimizadoService.buscarQuestoesComAlternativasPorLista(listaId);
+
+        Map<String, Object> resultado = new HashMap<>();
+        resultado.put("id", lista.getId());
+        resultado.put("titulo", lista.getTitulo());
+        resultado.put("professorNome", lista.getProfessor().getNome());
+        resultado.put("questoes", questoesComImagens);
+        resultado.put("totalQuestoes", questoesComImagens.size());
+
+        return resultado;
+    }
+
     // Método auxiliar
     private ListaResponseDTO convertToDTO(Lista lista) {
         return new ListaResponseDTO(
@@ -540,4 +567,3 @@ public class ListaService {
         );
     }
 }
-
