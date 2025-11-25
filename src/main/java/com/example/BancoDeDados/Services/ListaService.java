@@ -471,6 +471,14 @@ public class ListaService {
                 .collect(toList());
     }
 
+    @Transactional(readOnly = true)
+    public List<ListaResponseDTO> buscarListasPorInstituicao(UUID instituicaoId) {
+        List<Lista> listas = listaRepository.findByDisciplina_Instituicao_Id(instituicaoId);
+        return listas.stream()
+                .map(this::convertToDTO)
+                .collect(toList());
+    }
+
     // Métodos para Estudantes
     public ListaResponseDTO adicionarEstudante(UUID listaId, UUID estudanteId) {
         Lista lista = listaRepository.findById(listaId)

@@ -95,4 +95,8 @@ public interface RespostaEstudantesRepository extends JpaRepository<RespostaEstu
             "ORDER BY COUNT(DISTINCT l.id) DESC")
     List<AtividadeConcluidaDTO> findAtividadesConcluidasByDisciplina(@Param("disciplinaId") UUID disciplinaId);
 
+    // Contar questões respondidas por estudante em uma lista
+    @Query("SELECT COUNT(re) FROM RespostaEstudantes re " +
+            "WHERE re.questao.lista.id = :listaId AND re.estudante.id = :estudanteId")
+    long countByListaIdAndEstudanteId(@Param("listaId") UUID listaId, @Param("estudanteId") UUID estudanteId);
 }

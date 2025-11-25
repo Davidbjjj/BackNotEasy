@@ -114,9 +114,21 @@ public class EventoController {
         return service.listarPorProfessor(professorId);
     }
 
+    @GetMapping("/instituicao/{instituicaoId}")
+    public ResponseEntity<List<EventoListaDTO>> listarPorInstituicao(@PathVariable UUID instituicaoId) {
+        List<EventoListaDTO> eventos = service.listarPorInstituicao(instituicaoId);
+        return ResponseEntity.ok(eventos);
+    }
+
     @GetMapping("/aluno/email/{alunoEmail}")
     public List<Evento> listarPorEstudanteEmail(@PathVariable String alunoEmail) {
         return service.listarPorEstudanteEmail(alunoEmail);
+    }
+
+    @GetMapping("/estudante/{estudanteId}")
+    public ResponseEntity<List<EventoListaDTO>> listarPorEstudante(@PathVariable UUID estudanteId) {
+        List<EventoListaDTO> eventos = service.listarPorEstudanteId(estudanteId);
+        return ResponseEntity.ok(eventos);
     }
 
     @GetMapping("/{eventoId}/notas")

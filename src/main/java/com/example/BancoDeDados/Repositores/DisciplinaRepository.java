@@ -9,6 +9,7 @@ import java.util.UUID;
 
 public interface DisciplinaRepository extends JpaRepository<Disciplina, UUID> {
     List<Disciplina> findByInstituicao_Nome(String nomeEscola);
+    List<Disciplina> findByInstituicao_Id(UUID instituicaoId);
     Optional<Disciplina> findById(UUID Id);
     Optional<Disciplina> findByNome(String nome);
     List<Disciplina> findByProfessorId(UUID professorId);

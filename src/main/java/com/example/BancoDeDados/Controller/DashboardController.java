@@ -78,7 +78,15 @@ public class DashboardController {
         return notaService.getPorDisciplina(id);
     }
 
-
-
-
+    @GetMapping("/metricas/aluno/{alunoId}/disciplina/{disciplinaId}")
+    public ResponseEntity<?> getMetricasAlunoDisciplina(
+            @PathVariable UUID alunoId,
+            @PathVariable UUID disciplinaId) {
+        try {
+            var metricas = dashboardService.getMetricasAlunoDisciplina(alunoId, disciplinaId);
+            return ResponseEntity.ok(metricas);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Erro: " + e.getMessage());
+        }
+    }
 }
