@@ -33,4 +33,8 @@ public interface NotaEventoRepository extends JpaRepository<NotaEvento, UUID> {
             @Param("endDate") LocalDateTime endDate,
             @Param(value = "disciplinaId") UUID disciplinaId
     );
+
+    // Buscar notas de eventos de um estudante em uma disciplina específica
+    @Query("SELECT ne FROM NotaEvento ne WHERE ne.estudante.id = :estudanteId AND ne.evento.disciplina.id = :disciplinaId")
+    List<NotaEvento> findByEstudanteIdAndEventoDisciplinaId(@Param("estudanteId") UUID estudanteId, @Param("disciplinaId") UUID disciplinaId);
 }

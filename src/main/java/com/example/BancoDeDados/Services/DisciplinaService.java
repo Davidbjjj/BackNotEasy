@@ -189,6 +189,11 @@ public class DisciplinaService {
                 .stream().map(this::mapToDTO).collect(Collectors.toList());
     }
 
+    public List<DisciplinaResponseCountDTO> buscarPorInstituicao(UUID instituicaoId) {
+        return disciplinaRepository.findByInstituicao_Id(instituicaoId)
+                .stream().map(this::mapToCountDTO).collect(Collectors.toList());
+    }
+
     public List<DisciplinaResponseDTO> buscarPorProfessor(UUID professorId) {
         return disciplinaRepository.findByProfessorId(professorId)
                 .stream().map(this::mapToDTO).collect(Collectors.toList());
@@ -207,43 +212,55 @@ public class DisciplinaService {
         disciplinaRepository.delete(disciplina);
     }
 
+    private DisciplinaResponseCountDTO mapToCountDTO(Disciplina disciplina) {
+        return new DisciplinaResponseCountDTO(
+                disciplina.getId(),
+                disciplina.getNome(),
+                disciplina.getProfessor().getNome(),
+                disciplina.getInstituicao().getNome(),
+                disciplina.getEstudantes() != null ? disciplina.getEstudantes().size() : 0
+        );
+    }
+
     private DisciplinaResponseDTO mapToDTO(Disciplina disciplina) {
         return new DisciplinaResponseDTO(
                 disciplina.getId(),
                 disciplina.getNome(),
-                disciplina.getProfessor().getNome(),
+                disciplina.getProfessor() != null ? disciplina.getProfessor().getId() : null,
+                disciplina.getProfessor() != null ? disciplina.getProfessor().getNome() : null,
                 disciplina.getInstituicao().getNome(),
                 disciplina.getEstudantes().stream().map(Estudante::getNome).collect(Collectors.toList())
         );
     }
 
+    // Valida se solicitante é professor dono OU instituição dona da disciplina
+    private void validarAcesso(UUID solicitanteId, Disciplina disciplina) {
+        boolean professorOk = disciplina.getProfessor() != null && disciplina.getProfessor().getId().equals(solicitanteId);
+        boolean instituicaoOk = disciplina.getInstituicao() != null && disciplina.getInstituicao().getId().equals(solicitanteId);
+        if (!professorOk && !instituicaoOk) {
+            throw new IllegalArgumentException("Acesso negado");
+        }
+    }
+
     // New: retorna média por estudante na disciplina
-    public List<AlunoMediaDTO> getAlunoMedias(UUID disciplinaId, UUID professorId) {
-        // valida disciplina e pertencimento ao professor
+    public List<AlunoMediaDTO> getAlunoMedias(UUID disciplinaId, UUID solicitanteId) {
         Disciplina disciplina = disciplinaRepository.findById(disciplinaId)
                 .orElseThrow(() -> new IllegalArgumentException("Disciplina não encontrada"));
-        if (disciplina.getProfessor() == null || !disciplina.getProfessor().getId().equals(professorId)) {
-            throw new IllegalArgumentException("Acesso negado: professor não é proprietário da disciplina");
-        }
-
+        validarAcesso(solicitanteId, disciplina);
         List<AlunoMediaDTO> medias = respostaEstudantesRepository.findAlunoMediasByDisciplina(disciplinaId);
-        // converter média (0..1) para 0..100 e manter contagem
         return medias.stream().map(m -> {
             if (m.getMedia() != null) {
-                m.setMedia(Math.round(m.getMedia() * 10000.0) / 100.0); // 2 casas decimais
+                m.setMedia(Math.round(m.getMedia() * 10000.0) / 100.0);
             }
             return m;
         }).collect(Collectors.toList());
     }
 
     // New: listas com menores médias
-    public List<ListaMediaDTO> getListasMenoresMedias(UUID disciplinaId, UUID professorId) {
+    public List<ListaMediaDTO> getListasMenoresMedias(UUID disciplinaId, UUID solicitanteId) {
         Disciplina disciplina = disciplinaRepository.findById(disciplinaId)
                 .orElseThrow(() -> new IllegalArgumentException("Disciplina não encontrada"));
-        if (disciplina.getProfessor() == null || !disciplina.getProfessor().getId().equals(professorId)) {
-            throw new IllegalArgumentException("Acesso negado: professor não é proprietário da disciplina");
-        }
-
+        validarAcesso(solicitanteId, disciplina);
         List<ListaMediaDTO> listas = respostaEstudantesRepository.findListaMediasByDisciplinaOrderByMediaAsc(disciplinaId);
         return listas.stream().map(l -> {
             if (l.getMedia() != null) {
@@ -254,13 +271,10 @@ public class DisciplinaService {
     }
 
     // New: atividades concluidas por estudante na disciplina
-    public List<AtividadeConcluidaDTO> getAtividadesConcluidas(UUID disciplinaId, UUID professorId) {
+    public List<AtividadeConcluidaDTO> getAtividadesConcluidas(UUID disciplinaId, UUID solicitanteId) {
         Disciplina disciplina = disciplinaRepository.findById(disciplinaId)
                 .orElseThrow(() -> new IllegalArgumentException("Disciplina não encontrada"));
-        if (disciplina.getProfessor() == null || !disciplina.getProfessor().getId().equals(professorId)) {
-            throw new IllegalArgumentException("Acesso negado: professor não é proprietário da disciplina");
-        }
-
+        validarAcesso(solicitanteId, disciplina);
         return respostaEstudantesRepository.findAtividadesConcluidasByDisciplina(disciplinaId);
     }
 

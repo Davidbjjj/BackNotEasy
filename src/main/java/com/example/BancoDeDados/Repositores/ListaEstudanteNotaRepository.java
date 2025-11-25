@@ -18,4 +18,7 @@ public interface ListaEstudanteNotaRepository extends JpaRepository<ListaEstudan
     List<ListaEstudanteNota> findByEstudanteId(UUID estudanteId);
 
     boolean existsByListaIdAndEstudanteId(UUID listaId, UUID estudanteId);
+
+    // Buscar notas de um estudante em várias listas
+    List<ListaEstudanteNota> findByEstudanteIdAndListaIdIn(UUID estudanteId, List<UUID> listaIds);
 }

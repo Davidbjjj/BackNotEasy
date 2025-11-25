@@ -22,6 +22,10 @@ public interface ListaRepository extends JpaRepository<Lista, UUID> {
     @Query("SELECT l FROM Lista l WHERE l.disciplina.id = :disciplinaId")
     List<Lista> findByDisciplinaId(@Param("disciplinaId") UUID disciplinaId);
 
+    // Buscar listas de uma instituição através da disciplina
+    @Query("SELECT l FROM Lista l WHERE l.disciplina.instituicao.id = :instituicaoId")
+    List<Lista> findByDisciplina_Instituicao_Id(@Param("instituicaoId") UUID instituicaoId);
+
     // CORREÇÃO: Buscar lista com questões carregadas
     @Query("SELECT DISTINCT l FROM Lista l LEFT JOIN FETCH l.questoes WHERE l.id = :id")
     Optional<Lista> findByIdWithQuestoes(@Param("id") UUID id);

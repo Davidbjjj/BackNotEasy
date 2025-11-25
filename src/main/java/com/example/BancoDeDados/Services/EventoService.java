@@ -281,10 +281,38 @@ public class EventoService {
     }
 
     @Transactional(readOnly = true)
+    public List<EventoListaDTO> listarPorInstituicao(UUID instituicaoId) {
+        List<Evento> eventos = eventoRepository.findByDisciplina_Instituicao_Id(instituicaoId);
+        return eventos.stream()
+                .map(evento -> new EventoListaDTO(
+                        evento.getId(),
+                        evento.getTitulo(),
+                        evento.getData() != null ? evento.getData().toLocalDate() : null,
+                        evento.getDisciplina() != null ? evento.getDisciplina().getNome() : null,
+                        evento.getNotaMaxima()
+                ))
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
     public List<Evento> listarPorEstudanteEmail(String estudanteEmail) {
         Estudante estudante = estudanteRepository.findByEmail(estudanteEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Estudante não encontrado com email: " + estudanteEmail));
         return eventoRepository.findByNotasEstudante_Estudante_Id(estudante.getId());
+    }
+
+    @Transactional(readOnly = true)
+    public List<EventoListaDTO> listarPorEstudanteId(UUID estudanteId) {
+        List<Evento> eventos = eventoRepository.findByNotasEstudante_Estudante_Id(estudanteId);
+        return eventos.stream()
+                .map(evento -> new EventoListaDTO(
+                        evento.getId(),
+                        evento.getTitulo(),
+                        evento.getData() != null ? evento.getData().toLocalDate() : null,
+                        evento.getDisciplina() != null ? evento.getDisciplina().getNome() : null,
+                        evento.getNotaMaxima()
+                ))
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -494,19 +522,20 @@ public class EventoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Lista não encontrada"));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public com.example.BancoDeDados.ResponseDTO.EventoStatusResponse obterStatusENotaPorEventoEEstudante(UUID eventoId, UUID estudanteId) {
         // Busca o DTO de detalhes para informações de título/descrição/listas
         EventoDetalhesResponse eventoDTO = buscarPorId(eventoId);
 
         // Busca entidades para consultas diretas (notaEvento, etc)
         Evento eventoEntity = findEventoByIdOrThrow(eventoId);
-        Estudante estudante = null;
+        Estudante estudanteTemp = null;
         try {
-            estudante = findEstudanteByIdOrThrow(estudanteId);
+            estudanteTemp = findEstudanteByIdOrThrow(estudanteId);
         } catch (Exception e) {
             // estudante pode não estar vinculado ao evento; continuamos apenas com DTO
         }
+        final Estudante estudante = estudanteTemp;
 
         com.example.BancoDeDados.ResponseDTO.EventoStatusResponse resp = new com.example.BancoDeDados.ResponseDTO.EventoStatusResponse();
         resp.setIdEvento(eventoDTO.idEvento());
@@ -519,7 +548,52 @@ public class EventoService {
         resp.setNotaDoAluno("");
         resp.setStatus("pendente");
 
-        // Primeiro, se possível, checar se existe uma NotaEvento já associada ao estudante
+        // Se o evento tem listas associadas, sincronizar as notas primeiro
+        if (eventoDTO.listas() != null && !eventoDTO.listas().isEmpty() && estudante != null) {
+            for (var listaSimple : eventoDTO.listas()) {
+                try {
+                    java.util.UUID listaId = listaSimple.idLista();
+                    final Lista lista = findListaByIdOrThrow(listaId);
+
+                    // Sincronizar nota da lista para o evento
+                    var notaListaOpt = notaListaService.buscarNotaEstudanteOptional(listaId, estudanteId);
+                    if (notaListaOpt != null && notaListaOpt.isPresent()) {
+                        ListaEstudanteNota notaLista = notaListaOpt.get();
+                        if (notaLista.getNota() != null) {
+                            // Buscar ou criar NotaEvento
+                            NotaEvento notaEvento = notaEventoRepository.findByEstudanteAndEvento(estudante, eventoEntity)
+                                    .orElseGet(() -> {
+                                        NotaEvento novaNotaEvento = new NotaEvento();
+                                        novaNotaEvento.setEstudante(estudante);
+                                        novaNotaEvento.setEvento(eventoEntity);
+                                        novaNotaEvento.setProfessor(eventoEntity.getProfessor());
+                                        return novaNotaEvento;
+                                    });
+
+                            // Converter e atualizar nota
+                            Double notaConvertida = converterNotaListaParaEvento(
+                                    notaLista.getNota(),
+                                    eventoEntity.getNotaMaxima()
+                            );
+
+                            notaEvento.setNota(notaConvertida);
+                            notaEvento.setStatusEntrega(NotaEvento.StatusEntrega.ENTREGUE);
+                            notaEvento.setObservacao("Nota sincronizada automaticamente da lista: " + lista.getTitulo());
+                            notaEventoRepository.save(notaEvento);
+
+                            // Atualizar resposta com a nota sincronizada
+                            resp.setNotaDoAluno(notaConvertida.toString());
+                            resp.setStatus("entregue");
+                            return resp;
+                        }
+                    }
+                } catch (Exception e) {
+                    System.err.println("Erro ao sincronizar nota da lista para o evento: " + e.getMessage());
+                }
+            }
+        }
+
+        // Se não conseguiu sincronizar da lista, buscar NotaEvento existente
         if (estudante != null) {
             try {
                 java.util.Optional<NotaEvento> notaEventoOpt = notaEventoRepository.findByEstudanteAndEvento(estudante, eventoEntity);
@@ -533,30 +607,9 @@ public class EventoService {
                     } else if (ne.getNota() != null) {
                         resp.setStatus("entregue");
                     }
-                    return resp;
                 }
             } catch (Exception e) {
-                // ignorar e continuar para checar listas
-            }
-        }
-
-        // Se não encontrou NotaEvento, verificar listas associadas e usar a nota da lista
-        if (eventoDTO.listas() != null) {
-            for (var listaSimple : eventoDTO.listas()) {
-                try {
-                    java.util.UUID listaId = listaSimple.idLista();
-                    var notaListaOpt = notaListaService.buscarNotaEstudanteOptional(listaId, estudanteId);
-                    if (notaListaOpt != null && notaListaOpt.isPresent()) {
-                        var notaLista = notaListaOpt.get();
-                        if (notaLista.getNota() != null) {
-                            resp.setNotaDoAluno(notaLista.getNota().toPlainString());
-                            resp.setStatus("entregue");
-                            break;
-                        }
-                    }
-                } catch (Exception e) {
-                    // ignora listas problemáticas
-                }
+                System.err.println("Erro ao buscar NotaEvento: " + e.getMessage());
             }
         }
 

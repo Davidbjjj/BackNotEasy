@@ -6,6 +6,7 @@ import com.example.BancoDeDados.Repositores.DisciplinaRepository;
 import com.example.BancoDeDados.Repositores.EstudanteRepositores;
 import com.example.BancoDeDados.ResponseDTO.DisciplinaRequestDTO;
 import com.example.BancoDeDados.ResponseDTO.DisciplinaResponseDTO;
+import com.example.BancoDeDados.ResponseDTO.DisciplinaResponseCountDTO;
 import com.example.BancoDeDados.ResponseDTO.AlunoMediaDTO;
 import com.example.BancoDeDados.ResponseDTO.ListaMediaDTO;
 import com.example.BancoDeDados.ResponseDTO.AtividadeConcluidaDTO;
@@ -19,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/disciplinas")
@@ -42,9 +44,10 @@ public class DisciplinaController {
         return ResponseEntity.ok(new DisciplinaResponseDTO(
                 disciplina.getId(),
                 disciplina.getNome(),
+                disciplina.getProfessor() != null ? disciplina.getProfessor().getId() : null,
                 disciplina.getProfessor().getNome(),
                 disciplina.getInstituicao().getNome(),
-                disciplina.getEstudantes().stream().map(a -> a.getNome()).toList()
+                disciplina.getEstudantes().stream().map(a -> a.getNome()).collect(Collectors.toList())
         ));
     }
 
@@ -59,9 +62,9 @@ public class DisciplinaController {
                 .map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/instituicao/{nomeEscola}")
-    public ResponseEntity<List<DisciplinaResponseDTO>> buscarPorEscola(@PathVariable String nomeInstituicao) {
-        return ResponseEntity.ok(disciplinaService.buscarPorInstituicao(nomeInstituicao));
+    @GetMapping("/instituicao/{instituicaoId}")
+    public ResponseEntity<List<DisciplinaResponseCountDTO>> buscarPorEscola(@PathVariable UUID instituicaoId) {
+        return ResponseEntity.ok(disciplinaService.buscarPorInstituicao(instituicaoId));
     }
 
     @GetMapping("/professor/{professorId}")
@@ -159,9 +162,9 @@ public class DisciplinaController {
     // Analytics endpoints (professor-facing). For now professorId is required as query param to check ownership.
     @GetMapping("/{disciplinaId}/analytics/alunos/medias")
     public ResponseEntity<List<AlunoMediaDTO>> listarAlunoMedias(@PathVariable UUID disciplinaId,
-                                                                 @RequestParam UUID professorId) {
+                                                                 @RequestParam UUID solicitanteId) {
         try {
-            List<AlunoMediaDTO> result = disciplinaService.getAlunoMedias(disciplinaId, professorId);
+            List<AlunoMediaDTO> result = disciplinaService.getAlunoMedias(disciplinaId, solicitanteId);
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException e) {
             if (e.getMessage().contains("Acesso negado")) return ResponseEntity.status(403).build();
@@ -171,9 +174,9 @@ public class DisciplinaController {
 
     @GetMapping("/{disciplinaId}/analytics/listas/menor-media")
     public ResponseEntity<List<ListaMediaDTO>> listarListasMenorMedia(@PathVariable UUID disciplinaId,
-                                                                      @RequestParam UUID professorId) {
+                                                                      @RequestParam UUID solicitanteId) {
         try {
-            List<ListaMediaDTO> result = disciplinaService.getListasMenoresMedias(disciplinaId, professorId);
+            List<ListaMediaDTO> result = disciplinaService.getListasMenoresMedias(disciplinaId, solicitanteId);
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException e) {
             if (e.getMessage().contains("Acesso negado")) return ResponseEntity.status(403).build();
@@ -183,9 +186,9 @@ public class DisciplinaController {
 
     @GetMapping("/{disciplinaId}/analytics/atividades-concluidas")
     public ResponseEntity<List<AtividadeConcluidaDTO>> listarAtividadesConcluidas(@PathVariable UUID disciplinaId,
-                                                                                 @RequestParam UUID professorId) {
+                                                                                 @RequestParam UUID solicitanteId) {
         try {
-            List<AtividadeConcluidaDTO> result = disciplinaService.getAtividadesConcluidas(disciplinaId, professorId);
+            List<AtividadeConcluidaDTO> result = disciplinaService.getAtividadesConcluidas(disciplinaId, solicitanteId);
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException e) {
             if (e.getMessage().contains("Acesso negado")) return ResponseEntity.status(403).build();

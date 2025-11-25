@@ -144,6 +144,12 @@ public class ListaController {
         return listaService.buscarListasPorProfessor(professorId);
     }
 
+    @GetMapping("/instituicao/{instituicaoId}")
+    public ResponseEntity<List<ListaResponseDTO>> buscarListasPorInstituicao(@PathVariable UUID instituicaoId) {
+        List<ListaResponseDTO> listas = listaService.buscarListasPorInstituicao(instituicaoId);
+        return ResponseEntity.ok(listas);
+    }
+
     @PostMapping
     public ListaResponseDTO criarLista(@RequestParam String titulo, @RequestParam UUID professorId) {
         return listaService.criarLista(titulo, professorId);
