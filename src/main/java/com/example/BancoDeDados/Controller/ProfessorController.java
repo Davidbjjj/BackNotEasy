@@ -66,12 +66,12 @@ public class ProfessorController {
             Instituicao instituicao = instituicaoRepository.findById(professorDTO.instituicaoId())
                     .orElseThrow(() -> new IllegalArgumentException("Instituição não encontrada"));
 
-            // Verificar se o email do professor está na lista de emails permitidos
-            if (!instituicao.getEmailsPermitidos().contains(professorDTO.email())) {
-                return ResponseEntity.badRequest().body("Email não permitido para esta instituição");
+            // Verificar se já existe Account com o mesmo email
+            if (accountRepository.findByEmail(professorDTO.email()).isPresent()) {
+                return ResponseEntity.badRequest().body("Email já cadastrado");
             }
 
-            // Cria o professor com a instituição - AGORA FUNCIONA
+            // Cria o professor com a instituição
             Professor novoProfessor = new Professor(professorDTO, instituicao);
             professorService.criar(novoProfessor);
 
