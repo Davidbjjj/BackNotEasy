@@ -111,7 +111,7 @@ public class EstudanteController {
                             estudante.getDisciplina().stream()
                                     .map(disciplina -> new DisciplinaRequestDTO(
                                             disciplina.getNome(),
-                                            disciplina.getProfessor().getEmail(),
+                                            disciplina.getProfessor().getId(),
                                             disciplina.getInstituicao().getId()
                                     ))
                                     .toList()
