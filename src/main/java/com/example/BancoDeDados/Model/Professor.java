@@ -33,11 +33,12 @@ public class Professor implements UserDetails {
     @Column
     private String nome;
 
-    @Column(nullable = false)
-    private String materia1;
+    // agora armazenamos os IDs das disciplinas em vez dos nomes
+    @Column(columnDefinition = "uuid")
+    private UUID materia1;
 
-    @Column(nullable = false)
-    private String materia2;
+    @Column(columnDefinition = "uuid")
+    private UUID materia2;
 
     @ManyToOne
     @JoinColumn(name = "instituicao_id", nullable = false)
@@ -56,8 +57,8 @@ public class Professor implements UserDetails {
     // Construtor que recebe DTO e Instituicao
     public Professor(ProfessorResponseDTO professorDTO, Instituicao instituicao) {
         this.nome = professorDTO.nome();
-        this.materia1 = professorDTO.materia1();
-        this.materia2 = professorDTO.materia2();
+        this.materia1 = professorDTO.materia1Id();
+        this.materia2 = professorDTO.materia2Id();
         this.instituicao = instituicao; // Agora é o objeto Instituicao
         this.email = professorDTO.email();
         this.senha = professorDTO.senha();

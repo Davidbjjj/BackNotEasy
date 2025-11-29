@@ -27,7 +27,11 @@ public class Configurations {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
+                        // Apenas PROFESSOR pode processar/salvar PDF
                         .requestMatchers(HttpMethod.POST, "/pdf/processar-salvar").hasRole("PROFESSOR")
+                        // Restrição: apenas PROFESSOR ou INSTITUICAO podem acessar /serviceIA/**
+                        .requestMatchers("/serviceIA/**").hasAnyRole("PROFESSOR", "INSTITUICAO")
+                        // Demais rotas liberadas (ajuste conforme necessário)
                         .anyRequest().permitAll()
                 )
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class);

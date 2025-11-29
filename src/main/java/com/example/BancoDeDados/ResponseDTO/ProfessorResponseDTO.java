@@ -6,9 +6,9 @@ import java.util.UUID;
 
 public record ProfessorResponseDTO(
         String nome,
-        String materia1,
-        String materia2,
-        UUID instituicaoId,  // Mantém como UUID para a requisição
+        UUID materia1Id,
+        UUID materia2Id,
+        UUID instituicaoId,
         String email,
         String senha,
         Date dataNascimento
