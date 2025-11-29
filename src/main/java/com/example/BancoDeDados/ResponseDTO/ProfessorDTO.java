@@ -13,8 +13,8 @@ import java.util.UUID;
 public class ProfessorDTO {
     private UUID id;
     private String nome;
-    private String materia1;
-    private String materia2;
+    private UUID materia1;
+    private UUID materia2;
     private UUID instituicaoId; // Mude o nome para refletir que é o ID
     private String instituicaoNome; // Adicione este campo para o nome
     private String email;

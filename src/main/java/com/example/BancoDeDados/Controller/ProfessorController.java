@@ -1,9 +1,7 @@
 package com.example.BancoDeDados.Controller;
 
 import com.example.BancoDeDados.Model.Account;
-import com.example.BancoDeDados.Model.Instituicao;
 import com.example.BancoDeDados.Model.Professor;
-import com.example.BancoDeDados.Model.Role;
 import com.example.BancoDeDados.Repositores.AccountRepository;
 import com.example.BancoDeDados.Repositores.InstituicaoRepository;
 import com.example.BancoDeDados.Repositores.ProfessorRepositores;
@@ -62,42 +60,27 @@ public class ProfessorController {
     @PostMapping("/registrar")
     public ResponseEntity<?> registrar(@RequestBody @Valid ProfessorResponseDTO professorDTO) {
         try {
-            // Buscar a instituição pelo ID
-            Instituicao instituicao = instituicaoRepository.findById(professorDTO.instituicaoId())
-                    .orElseThrow(() -> new IllegalArgumentException("Instituição não encontrada"));
+            Professor savedProfessor = professorService.registerProfessor(professorDTO);
 
-            // Verificar se já existe Account com o mesmo email
-            if (accountRepository.findByEmail(professorDTO.email()).isPresent()) {
-                return ResponseEntity.badRequest().body("Email já cadastrado");
+            // Gera o token JWT com base no Account (busca o account criado)
+            Optional<Account> accountOpt = accountRepository.findByProfessorProfile_Id(savedProfessor.getId());
+            if (accountOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Account não foi criado corretamente");
             }
-
-            // Cria o professor com a instituição
-            Professor novoProfessor = new Professor(professorDTO, instituicao);
-            professorService.criar(novoProfessor);
-
-            // Cria o Account vinculado
-            Account account = new Account();
-            account.setEmail(professorDTO.email());
-            account.setSenha(passwordEncoder.encode(professorDTO.senha()));
-            account.setRole(Role.PROFESSOR);
-            account.setProfessorProfile(novoProfessor);
-
-            accountRepository.save(account);
-
-            // Gera o token JWT com base no Account
+            Account account = accountOpt.get();
             String token = tokenService.gerarToken(account);
 
             // Envia e-mail de boas-vindas
             String assunto = "Confirmação de cadastro";
-            String mensagem = String.format("Olá %s, obrigado por se cadastrar no nosso site!", novoProfessor.getNome());
-            emailService.enviarEmail(novoProfessor.getEmail(), assunto, mensagem);
+            String mensagem = String.format("Olá %s, obrigado por se cadastrar no nosso site!", savedProfessor.getNome());
+            emailService.enviarEmail(savedProfessor.getEmail(), assunto, mensagem);
 
             // Retorno da resposta
             return ResponseEntity.ok(
                     new PLoginResponseDTO(
-                            novoProfessor.getId(),
+                            savedProfessor.getId(),
                             token,
-                            novoProfessor.getNome()
+                            savedProfessor.getNome()
                     )
             );
         } catch (IllegalArgumentException e) {
