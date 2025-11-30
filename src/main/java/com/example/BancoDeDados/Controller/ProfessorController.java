@@ -8,6 +8,7 @@ import com.example.BancoDeDados.Repositores.ProfessorRepositores;
 import com.example.BancoDeDados.ResponseDTO.PLoginResponseDTO;
 import com.example.BancoDeDados.ResponseDTO.ProfessorDTO;
 import com.example.BancoDeDados.ResponseDTO.ProfessorResponseDTO;
+import com.example.BancoDeDados.ResponseDTO.ProfessorUpdateDTO;
 import com.example.BancoDeDados.Security.TokenService;
 import com.example.BancoDeDados.Services.EmailService;
 import com.example.BancoDeDados.Services.ProfessorService;
@@ -100,11 +101,36 @@ public class ProfessorController {
     }
 
     @CrossOrigin(originPatterns = "*", allowedHeaders = "*")
+    @GetMapping("/instituicao/{instituicaoId}")
+    public ResponseEntity<List<ProfessorDTO>> listarPorInstituicao(@PathVariable UUID instituicaoId) {
+        try {
+            List<ProfessorDTO> professores = professorService.listarPorInstituicao(instituicaoId);
+            return ResponseEntity.ok(professores);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    @CrossOrigin(originPatterns = "*", allowedHeaders = "*")
     @GetMapping("/editar/{id}")
     public ResponseEntity<Professor> editar(@PathVariable UUID id) {
         Optional<Professor> professorOpt = professorService.editar(id);
         return professorOpt.map(professor -> new ResponseEntity<>(professor, HttpStatus.OK))
                 .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+    }
+
+    @CrossOrigin(originPatterns = "*", allowedHeaders = "*")
+    @PutMapping("/{id}")
+    public ResponseEntity<?> atualizar(@PathVariable UUID id, @RequestBody @Valid ProfessorUpdateDTO updateDTO) {
+        try {
+            Professor professorAtualizado = professorService.updateProfessor(id, updateDTO);
+            return ResponseEntity.ok(new ProfessorDTO(professorAtualizado));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro ao atualizar professor: " + e.getMessage());
+        }
     }
 
     @CrossOrigin(originPatterns = "*", allowedHeaders = "*")

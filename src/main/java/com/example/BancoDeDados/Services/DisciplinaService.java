@@ -216,6 +216,46 @@ public class DisciplinaService {
         disciplinaRepository.delete(disciplina);
     }
 
+    @Transactional
+    public Disciplina updateDisciplina(UUID id, DisciplinaUpdateDTO dto) {
+        Disciplina disciplina = disciplinaRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Disciplina não encontrada"));
+
+        // Atualizar nome se fornecido
+        if (dto.nome() != null && !dto.nome().isBlank()) {
+            disciplina.setNome(dto.nome());
+        }
+
+        // Atualizar professor se fornecido
+        if (dto.professorId() != null) {
+            Professor professor = professorRepository.findById(dto.professorId())
+                    .orElseThrow(() -> new IllegalArgumentException("Professor não encontrado"));
+
+            // Verificar se o professor pertence à mesma instituição da disciplina
+            if (!professor.getInstituicao().getId().equals(disciplina.getInstituicao().getId())) {
+                throw new IllegalArgumentException("Professor não pertence à mesma instituição da disciplina");
+            }
+
+            disciplina.setProfessor(professor);
+        }
+
+        // Atualizar instituição se fornecida
+        if (dto.instituicaoId() != null) {
+            Instituicao instituicao = instituicaoRepository.findById(dto.instituicaoId())
+                    .orElseThrow(() -> new IllegalArgumentException("Instituição não encontrada"));
+
+            // Verificar se o professor pertence à nova instituição
+            if (disciplina.getProfessor() != null &&
+                !disciplina.getProfessor().getInstituicao().getId().equals(dto.instituicaoId())) {
+                throw new IllegalArgumentException("Professor não pertence à nova instituição");
+            }
+
+            disciplina.setInstituicao(instituicao);
+        }
+
+        return disciplinaRepository.save(disciplina);
+    }
+
     private DisciplinaResponseCountDTO mapToCountDTO(Disciplina disciplina) {
         return new DisciplinaResponseCountDTO(
                 disciplina.getId(),

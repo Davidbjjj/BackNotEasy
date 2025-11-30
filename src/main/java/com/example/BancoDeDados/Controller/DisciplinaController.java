@@ -5,6 +5,7 @@ import com.example.BancoDeDados.Model.Estudante;
 import com.example.BancoDeDados.Repositores.DisciplinaRepository;
 import com.example.BancoDeDados.Repositores.EstudanteRepositores;
 import com.example.BancoDeDados.ResponseDTO.DisciplinaRequestDTO;
+import com.example.BancoDeDados.ResponseDTO.DisciplinaUpdateDTO;
 import com.example.BancoDeDados.ResponseDTO.DisciplinaResponseDTO;
 import com.example.BancoDeDados.ResponseDTO.DisciplinaResponseCountDTO;
 import com.example.BancoDeDados.ResponseDTO.AlunoMediaDTO;
@@ -82,6 +83,26 @@ public class DisciplinaController {
         disciplinaService.deletar(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> atualizar(@PathVariable UUID id, @RequestBody DisciplinaUpdateDTO updateDTO) {
+        try {
+            Disciplina disciplinaAtualizada = disciplinaService.updateDisciplina(id, updateDTO);
+            return ResponseEntity.ok(new DisciplinaResponseDTO(
+                    disciplinaAtualizada.getId(),
+                    disciplinaAtualizada.getNome(),
+                    disciplinaAtualizada.getProfessor() != null ? disciplinaAtualizada.getProfessor().getId() : null,
+                    disciplinaAtualizada.getProfessor() != null ? disciplinaAtualizada.getProfessor().getNome() : null,
+                    disciplinaAtualizada.getInstituicao().getNome(),
+                    disciplinaAtualizada.getEstudantes().stream().map(e -> e.getNome()).collect(java.util.stream.Collectors.toList())
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Erro ao atualizar disciplina: " + e.getMessage());
+        }
+    }
+
     @PostMapping("/{disciplinaId}/estudantes/{estudanteId}")
     public ResponseEntity<DisciplinaResponseDTO> adicionarEstudante(
             @PathVariable UUID disciplinaId,

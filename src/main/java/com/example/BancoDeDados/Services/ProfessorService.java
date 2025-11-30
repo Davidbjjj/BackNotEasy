@@ -10,6 +10,7 @@ import com.example.BancoDeDados.Repositores.InstituicaoRepository;
 import com.example.BancoDeDados.Repositores.DisciplinaRepository;
 import com.example.BancoDeDados.ResponseDTO.ProfessorDTO;
 import com.example.BancoDeDados.ResponseDTO.ProfessorResponseDTO;
+import com.example.BancoDeDados.ResponseDTO.ProfessorUpdateDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -101,14 +102,39 @@ public class ProfessorService {
                 .collect(Collectors.toList());
     }
 
+    public List<ProfessorDTO> listarPorInstituicao(UUID instituicaoId) {
+        List<Professor> professores = professorRepositores.findByInstituicaoId(instituicaoId);
+        return professores.stream()
+                .map(ProfessorDTO::new)
+                .collect(Collectors.toList());
+    }
+
     public boolean deletar(UUID id) {
         try {
-            if (professorRepositores.existsById(id)) {
-                professorRepositores.deleteById(id);
-                return true;
-            } else {
+            if (!professorRepositores.existsById(id)) {
                 return false;
             }
+            // Carregar professor
+            Professor professor = professorRepositores.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Professor não encontrado"));
+
+            // 1) Desassociar disciplinas que apontam para este professor
+            List<Disciplina> disciplinas = disciplinaRepository.findByProfessorId(id);
+            for (Disciplina d : disciplinas) {
+                d.setProfessor(null);
+            }
+            if (!disciplinas.isEmpty()) {
+                disciplinaRepository.saveAll(disciplinas);
+            }
+
+            // 2) Remover Account vinculado a este professor, se existir
+            accountRepository.findByProfessorProfile_Id(id).ifPresent(acc -> {
+                accountRepository.delete(acc);
+            });
+
+            // 3) Agora deletar o professor
+            professorRepositores.delete(professor);
+            return true;
         } catch (Exception e) {
             throw new RuntimeException("Erro ao deletar o professor: " + e.getMessage());
         }
@@ -120,6 +146,43 @@ public class ProfessorService {
         } catch (Exception e) {
             throw new RuntimeException("Erro ao buscar o professor: " + e.getMessage());
         }
+    }
+
+    @Transactional
+    public Professor updateProfessor(UUID id, ProfessorUpdateDTO dto) {
+        Professor professor = professorRepositores.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Professor não encontrado"));
+
+        // Atualizar campos básicos
+        if (dto.nome() != null) {
+            professor.setNome(dto.nome());
+        }
+
+        if (dto.dataNascimento() != null) {
+            professor.setDataNascimento(dto.dataNascimento());
+        }
+
+        // Atualizar instituição se fornecida
+        if (dto.instituicaoId() != null) {
+            Instituicao instituicao = instituicaoRepository.findById(dto.instituicaoId())
+                    .orElseThrow(() -> new IllegalArgumentException("Instituição não encontrada"));
+            professor.setInstituicao(instituicao);
+        }
+
+        // Atualizar matérias (disciplinas) se fornecidas
+        if (dto.materia1Id() != null) {
+            Disciplina disciplina1 = disciplinaRepository.findById(dto.materia1Id())
+                    .orElseThrow(() -> new IllegalArgumentException("Disciplina 1 não encontrada"));
+            professor.setMateria1(dto.materia1Id());
+        }
+
+        if (dto.materia2Id() != null) {
+            Disciplina disciplina2 = disciplinaRepository.findById(dto.materia2Id())
+                    .orElseThrow(() -> new IllegalArgumentException("Disciplina 2 não encontrada"));
+            professor.setMateria2(dto.materia2Id());
+        }
+
+        return professorRepositores.save(professor);
     }
 
     public boolean validarSenha(String senha) {
