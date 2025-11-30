@@ -318,4 +318,42 @@ public class ListaController {
             return ResponseEntity.notFound().build();
         }
     }
+
+    @PostMapping("/disciplina/{disciplinaId}/analise-ia")
+    public ResponseEntity<AnaliseIAResponseDTO> analisarTopListasPorDisciplina(@PathVariable UUID disciplinaId) {
+        try {
+            List<ListaTopDTO> topListas = listaService.buscarTop10ListasPorDisciplinaComEstatisticas(disciplinaId);
+            AnaliseIARequestDTO req = new AnaliseIARequestDTO(disciplinaId, topListas);
+            AnaliseIAResponseDTO resp = tratarRespostaIAService.analisarListasComGemini(req);
+            return ResponseEntity.ok(resp);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @PostMapping("/disciplina/{disciplinaId}/analise-ia-piores")
+    public ResponseEntity<List<AnaliseIAListaDTO>> analisarTop10PioresListas(@PathVariable UUID disciplinaId) {
+        try {
+            // Busca top 10 listas ordenadas por pior desempenho (maior total de respostas/erros)
+            List<ListaTopDTO> topListas = listaService.buscarTop10ListasPorDisciplinaComEstatisticas(disciplinaId);
+            // Gera uma análise por lista
+            List<AnaliseIAListaDTO> analises = tratarRespostaIAService.analisarPioresListasComGemini(topListas);
+            return ResponseEntity.ok(analises);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @PostMapping("/disciplina/{disciplinaId}/analise-ia-disciplina")
+    public ResponseEntity<AnaliseIADisciplinaDTO> analisarDisciplina(@PathVariable UUID disciplinaId) {
+        try {
+            List<ListaTopDTO> listas = listaService.buscarTop10ListasPorDisciplinaComEstatisticas(disciplinaId);
+            AnaliseIADisciplinaDTO dto = tratarRespostaIAService.analisarDisciplinaComGemini(disciplinaId, listas);
+            return ResponseEntity.ok(dto);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
 }

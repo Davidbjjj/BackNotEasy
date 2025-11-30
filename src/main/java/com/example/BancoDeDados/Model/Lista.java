@@ -55,6 +55,10 @@ public class Lista {
     @JsonManagedReference("lista-eventos")
     private List<ListaEvento> eventos = new ArrayList<>();
 
+    @OneToMany(mappedBy = "lista", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    private List<ListaEstudanteNota> notas = new ArrayList<>();
+
     // Métodos auxiliares para gerenciar a relação bidirecional
     public void adicionarQuestao(Questao questao) {
         if (questoes == null) {

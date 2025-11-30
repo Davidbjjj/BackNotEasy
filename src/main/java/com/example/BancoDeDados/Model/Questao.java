@@ -51,6 +51,11 @@ public class Questao {
     @Builder.Default
     private List<QuestaoImagem> imagens = new ArrayList<>();
 
+    // Relacionamento com respostas de estudantes
+    @OneToMany(mappedBy = "questao", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<RespostaEstudantes> respostas = new ArrayList<>();
+
     //  Helper method para adicionar alternativa
     public void addAlternativa(String texto, Integer ordem) {
         QuestaoAlternativa alt = QuestaoAlternativa.builder()

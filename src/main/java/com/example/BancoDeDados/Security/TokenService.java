@@ -18,7 +18,7 @@ import java.util.UUID;
 public class TokenService {
 
     private final Set<String> revokedTokens = new HashSet<>();
-    private final String secret = "1234";
+    private final String secret = System.getProperty("jwt.secret", "1234");
 
     public String gerarToken(Account account) {
         try {
@@ -148,6 +148,18 @@ public class TokenService {
 
     public boolean isTokenRevoked(String token) {
         return revokedTokens.contains(token);
+    }
+
+    public String extrairClaim(String token, String claim) {
+        try {
+            if (token.startsWith("Bearer ")) token = token.substring(7);
+            Algorithm algorithm = Algorithm.HMAC256(secret);
+            var decoded = JWT.require(algorithm).withIssuer("BancoDeQuestoes").build().verify(token);
+            var c = decoded.getClaim(claim);
+            return c.isNull() ? null : c.asString();
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private Instant generateTokenExpiration() {
