@@ -27,6 +27,8 @@ public class Configurations {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
+                        // IMPORTANTE: Permitir OPTIONS para CORS preflight
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         // Apenas PROFESSOR pode processar/salvar PDF
                         .requestMatchers(HttpMethod.POST, "/pdf/processar-salvar").hasRole("PROFESSOR")
                         // Restrição: apenas PROFESSOR ou INSTITUICAO podem acessar /serviceIA/**

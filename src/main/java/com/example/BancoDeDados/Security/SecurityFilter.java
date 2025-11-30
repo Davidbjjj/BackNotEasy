@@ -14,6 +14,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 
 @Component
 public class SecurityFilter extends OncePerRequestFilter {
@@ -29,21 +30,26 @@ public class SecurityFilter extends OncePerRequestFilter {
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             String token = authorizationHeader.substring(7);
 
-            // Se o token foi revogado, bloqueia imediatamente
+            // Bloqueia tokens revogados
             if (tokenService.isTokenRevoked(token)) {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 return;
             }
 
+            // Valida assinatura/expiração e retorna subject (email) se válido
             String subject = tokenService.validarToken(token);
 
             if (subject != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                // Extrai role do token (ex.: PROFESSOR, INSTITUICAO) e mapeia para ROLE_*
+                String role = tokenService.extrairClaim(token, "role");
+                List<SimpleGrantedAuthority> authorities = role != null
+                        ? List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                        : Collections.emptyList();
 
-                var authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_ADM"));
-                var authentication = new UsernamePasswordAuthenticationToken( null, authorities);
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(subject, null, authorities);
 
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         }
