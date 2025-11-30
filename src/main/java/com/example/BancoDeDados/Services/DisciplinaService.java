@@ -159,10 +159,14 @@ public class DisciplinaService {
             Instituicao instituicao = instituicaoRepository.findById(dto.instituicaoId())
                     .orElseThrow(() -> new IllegalArgumentException("Instituição não encontrada"));
 
-            // Use o novo método que já faz a verificação da instituição
-            Professor professor = professorRepository.findByEmailAndInstituicaoId(dto.emailProfessor(), dto.instituicaoId())
-                    .orElseThrow(() -> new IllegalArgumentException(
-                            "Professor não encontrado ou não pertence à instituição informada"));
+            // Buscar professor por ID
+            Professor professor = professorRepository.findById(dto.professorId())
+                    .orElseThrow(() -> new IllegalArgumentException("Professor não encontrado"));
+
+            // Verificar se o professor pertence à instituição informada
+            if (!professor.getInstituicao().getId().equals(dto.instituicaoId())) {
+                throw new IllegalArgumentException("Professor não pertence à instituição informada");
+            }
 
             Disciplina disciplina = new Disciplina();
             disciplina.setNome(dto.nome());

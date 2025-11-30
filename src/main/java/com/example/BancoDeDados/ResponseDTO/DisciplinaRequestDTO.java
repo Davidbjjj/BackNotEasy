@@ -4,6 +4,6 @@ import java.util.UUID;
 
 public record DisciplinaRequestDTO(
         String nome,
-        String emailProfessor,
+        UUID professorId,
         UUID instituicaoId
 ) {}
