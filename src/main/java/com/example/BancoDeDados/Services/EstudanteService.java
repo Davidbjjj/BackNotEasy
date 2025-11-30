@@ -44,7 +44,11 @@ public class EstudanteService {
     }
 
     public List<Estudante> listarPorInstituicao(UUID instituicaoId) {
-        return estudanteRepositores.findByInstituicaoId(instituicaoId);
+        // Buscar instituição por id e usar o nome para consultar os estudantes
+        Instituicao instituicao = instituicaoRepository.findById(instituicaoId)
+                .orElseThrow(() -> new IllegalArgumentException("Instituição não encontrada"));
+
+        return estudanteRepositores.findByInstituicao(instituicao.getNome());
     }
 
     public boolean deletar(UUID id) {

@@ -95,4 +95,32 @@ public class IAService {
         return respostaDoGemini;
     }
 
+    public String enviarPromptSimples(String prompt) {
+        RestTemplate restTemplate = new RestTemplate();
+        JSONObject requestPayload = new JSONObject();
+        JSONObject content = new JSONObject();
+        JSONObject part = new JSONObject();
+        part.put("text", prompt);
+        content.append("parts", part);
+        requestPayload.append("contents", content);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("x-goog-api-key", apiKey);
+        HttpEntity<String> entity = new HttpEntity<>(requestPayload.toString(), headers);
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(GEMINI_URL, HttpMethod.POST, entity, String.class);
+            JSONObject jsonResponse = new JSONObject(response.getBody());
+            JSONArray candidates = jsonResponse.optJSONArray("candidates");
+            if (candidates != null && candidates.length() > 0) {
+                JSONObject contentObj = candidates.getJSONObject(0).getJSONObject("content");
+                JSONArray parts = contentObj.getJSONArray("parts");
+                if (parts.length() > 0) {
+                    return parts.getJSONObject(0).getString("text");
+                }
+            }
+        } catch (Exception e) {
+            return "Erro ao consultar serviço de IA: " + e.getMessage();
+        }
+        return "";
+    }
 }

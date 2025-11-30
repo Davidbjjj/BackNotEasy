@@ -1,6 +1,7 @@
 package com.example.BancoDeDados.Repositores;
 
 import com.example.BancoDeDados.Model.Questao;
+import com.example.BancoDeDados.Repositores.projections.QuestaoStatsProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -29,4 +30,10 @@ public interface QuestaoRepositores extends JpaRepository<Questao, Integer> {
 
     @Query("SELECT DISTINCT q FROM Questao q LEFT JOIN FETCH q.alternativas WHERE q.id IN :questaoIds ORDER BY q.id")
     List<Questao> findAllByIdWithAlternativas(@Param("questaoIds") List<Integer> questaoIds);
+
+    @Query(value = "SELECT q.lista_id as listaId, q.id as questaoId, q.enunciado as enunciado, q.gabarito as gabarito, " +
+            "COUNT(re.id) as totalRespondidas, SUM(CASE WHEN re.resposta = true THEN 1 ELSE 0 END) as acertos " +
+            "FROM questao q LEFT JOIN resposta_estudantes re ON re.questao_id = q.id " +
+            "WHERE q.lista_id IN :listaIds GROUP BY q.lista_id, q.id", nativeQuery = true)
+    List<QuestaoStatsProjection> aggregateStatsByListaIds(@Param("listaIds") List<UUID> listaIds);
 }

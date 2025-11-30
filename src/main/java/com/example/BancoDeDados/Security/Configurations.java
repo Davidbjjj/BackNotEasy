@@ -31,6 +31,8 @@ public class Configurations {
                         .requestMatchers(HttpMethod.POST, "/pdf/processar-salvar").hasRole("PROFESSOR")
                         // Restrição: apenas PROFESSOR ou INSTITUICAO podem acessar /serviceIA/**
                         .requestMatchers("/serviceIA/**").hasAnyRole("PROFESSOR", "INSTITUICAO")
+                        // Apenas ADMIN pode executar SQL via /admin/sql/**
+                        .requestMatchers("/admin/sql/**").hasRole("ADMIN")
                         // Demais rotas liberadas (ajuste conforme necessário)
                         .anyRequest().permitAll()
                 )

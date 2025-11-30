@@ -2,11 +2,9 @@ package com.example.BancoDeDados.Services;
 
 import com.example.BancoDeDados.Model.*;
 import com.example.BancoDeDados.Repositores.*;
-import com.example.BancoDeDados.ResponseDTO.AlunoNotaDTO;
-import com.example.BancoDeDados.ResponseDTO.DisciplinaProfessorResponseDTO;
-import com.example.BancoDeDados.ResponseDTO.ListaCompletaResponseDTO;
-import com.example.BancoDeDados.ResponseDTO.ListaResponseDTO;
-import com.example.BancoDeDados.ResponseDTO.QuestaoResponseDTO;
+import com.example.BancoDeDados.ResponseDTO.*;
+import com.example.BancoDeDados.Repositores.projections.PiorListaProjection;
+import com.example.BancoDeDados.Repositores.projections.QuestaoStatsProjection;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
@@ -45,6 +43,9 @@ public class ListaService {
 
     @Autowired
     private QuestaoOtimizadoService questaoOtimizadoService;
+
+    @Autowired
+    private RespostaEstudantesRepository respostaEstudantesRepository;
 
     public List<AlunoNotaDTO> getNotasByListaId(UUID listaId) {
         List<ListaEstudanteNota> notas = listaEstudanteNotaRepository.findByListaId(listaId);
@@ -563,6 +564,29 @@ public class ListaService {
         resultado.put("questoes", questoesComImagens);
         resultado.put("totalQuestoes", questoesComImagens.size());
 
+        return resultado;
+    }
+
+    @Transactional(readOnly = true)
+    public List<ListaTopDTO> buscarTop10ListasPorDisciplinaComEstatisticas(UUID disciplinaId) {
+        List<PiorListaProjection> piorListas = listaRepository.findTop10PioresListasByDisciplina(disciplinaId);
+        List<UUID> listaIds = piorListas.stream().map(PiorListaProjection::getListaId).toList();
+        // Query única para estatísticas de todas as questões dessas listas
+        List<QuestaoStatsProjection> stats = questaoRepository.aggregateStatsByListaIds(listaIds);
+        // Agrupar por listaId
+        Map<UUID, List<QuestaoStatsDTO>> porLista = new HashMap<>();
+        for (QuestaoStatsProjection s : stats) {
+            int total = s.getTotalRespondidas() == null ? 0 : s.getTotalRespondidas().intValue();
+            int acertos = s.getAcertos() == null ? 0 : s.getAcertos().intValue();
+            int erros = total - acertos;
+            porLista.computeIfAbsent(s.getListaId(), k -> new ArrayList<>())
+                    .add(new QuestaoStatsDTO(s.getQuestaoId(), s.getEnunciado(), s.getGabarito(), total, acertos, erros));
+        }
+        List<ListaTopDTO> resultado = new ArrayList<>();
+        for (PiorListaProjection proj : piorListas) {
+            List<QuestaoStatsDTO> qs = porLista.getOrDefault(proj.getListaId(), new ArrayList<>());
+            resultado.add(new ListaTopDTO(proj.getListaId(), proj.getTitulo(), qs));
+        }
         return resultado;
     }
 
