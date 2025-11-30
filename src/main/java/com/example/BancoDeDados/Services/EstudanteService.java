@@ -43,6 +43,10 @@ public class EstudanteService {
 
     }
 
+    public List<Estudante> listarPorInstituicao(UUID instituicaoId) {
+        return estudanteRepositores.findByInstituicaoId(instituicaoId);
+    }
+
     public boolean deletar(UUID id) {
         try {
             if (estudanteRepositores.existsById(id)) {

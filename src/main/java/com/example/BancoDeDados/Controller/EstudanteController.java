@@ -125,6 +125,35 @@ public class EstudanteController {
         }
     }
 
+    @GetMapping("/instituicao/{instituicaoId}")
+    public ResponseEntity<List<EstudanteListagemDTO>> listarPorInstituicao(@PathVariable UUID instituicaoId) {
+        try {
+            List<Estudante> estudantes = estudanteService.listarPorInstituicao(instituicaoId);
+
+            List<EstudanteListagemDTO> estudantesDTO = estudantes.stream()
+                    .map(estudante -> new EstudanteListagemDTO(
+                            estudante.getId(),
+                            estudante.getNome(),
+                            estudante.getDataNascimento(),
+                            estudante.getInstituicao(),
+                            estudante.getEmail(),
+                            estudante.getDisciplina().stream()
+                                    .map(disciplina -> new DisciplinaRequestDTO(
+                                            disciplina.getNome(),
+                                            disciplina.getProfessor().getId(),
+                                            disciplina.getInstituicao().getId()
+                                    ))
+                                    .toList()
+                    ))
+                    .toList();
+
+            return ResponseEntity.ok(estudantesDTO);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(null);
+        }
+    }
+
     @DeleteMapping("/deletar/{id}")
     public ResponseEntity<Void> deletar(@PathVariable UUID id) {
 
