@@ -36,9 +36,11 @@ public class Account implements UserDetails {
     @OneToOne
     @JoinColumn(name = "estudante_id")
     private Estudante estudanteProfile;
+
     @OneToOne
     @JoinColumn(name = "instituicao_id")
     private Instituicao instituicaoProfile;
+
     @OneToOne
     @JoinColumn(name = "pais_id")
     private Pais paisProfile;
