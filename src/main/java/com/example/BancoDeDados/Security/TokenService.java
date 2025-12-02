@@ -53,7 +53,9 @@ public class TokenService {
             }
 
             if (account.getInstituicaoProfile() != null) {
-                tokenBuilder.withClaim("userId", account.getInstituicaoProfile().getId().toString());
+                tokenBuilder
+                        .withClaim("userId", account.getInstituicaoProfile().getId().toString())
+                        .withClaim("nome", account.getInstituicaoProfile().getNome());
             }
 
             return tokenBuilder.sign(algorithm);
