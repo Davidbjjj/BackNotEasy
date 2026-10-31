@@ -387,6 +387,29 @@ public class ListaService {
         return new ListaResponseDTO(lista.getId(), lista.getTitulo(), lista.getProfessor().getNome());
     }
 
+    @Transactional(readOnly = true)
+    public List<QuestaoResponseDTO> buscarQuestoesPorLista(UUID listaId) {
+        // Buscar questões da lista
+        List<Questao> questoes = questaoRepository.findByListaIdWithAlternativas(listaId);
+
+        // Inicializar alternativas dentro da transação
+        questoes.forEach(q -> {
+            if (q.getAlternativas() != null) {
+                q.getAlternativas().size();
+            }
+        });
+
+        return questoes.stream()
+                .map(questao -> new QuestaoResponseDTO(
+                        questao.getId(),
+                        questao.getCabecalho(),
+                        questao.getEnunciado(),
+                        questao.getAlternativasTexto(),
+                        questao.getGabarito()
+                ))
+                .collect(toList());
+    }
+
     @CacheEvict(value = {"listaQuestoesCompact"}, allEntries = true)
     public ListaResponseDTO removerQuestao(UUID listaId, Integer questaoId) {
         Lista lista = listaRepository.findById(listaId)

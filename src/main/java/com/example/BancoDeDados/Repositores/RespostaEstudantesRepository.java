@@ -1,5 +1,7 @@
 package com.example.BancoDeDados.Repositores;
 
+import com.example.BancoDeDados.Model.Estudante;
+import com.example.BancoDeDados.Model.Questao;
 import com.example.BancoDeDados.Model.RespostaEstudantes;
 import com.example.BancoDeDados.ResponseDTO.AlunoMediaDTO;
 import com.example.BancoDeDados.ResponseDTO.ListaMediaDTO;
@@ -19,6 +21,7 @@ public interface RespostaEstudantesRepository extends JpaRepository<RespostaEstu
     // Métodos básicos (mantenha estes)
     Optional<RespostaEstudantes> findByQuestaoIdAndEstudanteId(Integer questaoId, UUID estudanteId);
     boolean existsByEstudanteId(UUID estudanteId);
+    Optional<RespostaEstudantes> findByQuestaoAndEstudante(Questao questao, Estudante estudante);
     boolean existsByQuestaoIdAndEstudanteId(Integer questaoId, UUID estudanteId);
     List<RespostaEstudantes> findByEstudanteId(UUID estudanteId);
 
@@ -43,6 +46,18 @@ public interface RespostaEstudantesRepository extends JpaRepository<RespostaEstu
             "AND re.resposta = true")
     long countByEstudanteIdAndQuestaoListaIdAndRespostaTrue(@Param("estudanteId") UUID estudanteId,
                                                             @Param("listaId") UUID listaId);
+
+    // CORREÇÃO: Método alternativo usando JOIN explícito
+    @Query("SELECT re FROM RespostaEstudantes re " +
+            "JOIN re.questao q " +
+            "WHERE re.estudante.id = :estudanteId AND q.lista.id = :listaId")
+    List<RespostaEstudantes> findRespostasPorEstudanteELista(@Param("estudanteId") UUID estudanteId,
+                                                             @Param("listaId") UUID listaId);
+
+    // CORREÇÃO: Buscar respostas por lista
+    @Query("SELECT re FROM RespostaEstudantes re " +
+            "WHERE re.questao.lista.id = :listaId")
+    List<RespostaEstudantes> findByQuestaoListaId(@Param("listaId") UUID listaId);
 
     // CORREÇÃO: Buscar respostas com JOIN FETCH
     @Query("SELECT re FROM RespostaEstudantes re " +

@@ -188,6 +188,11 @@ public class DisciplinaService {
         return disciplinaRepository.findById(id).map(this::mapToDTO);
     }
 
+    public List<DisciplinaResponseDTO> buscarPorInstituicaoNome(String nomeInstituicao) {
+        return disciplinaRepository.findByInstituicao_Nome(nomeInstituicao)
+                .stream().map(this::mapToDTO).collect(Collectors.toList());
+    }
+
     public List<DisciplinaResponseCountDTO> buscarPorInstituicao(UUID instituicaoId) {
         return disciplinaRepository.findByInstituicao_Id(instituicaoId)
                 .stream().map(this::mapToCountDTO).collect(Collectors.toList());

@@ -1,6 +1,7 @@
 package com.example.BancoDeDados.Model;
 
 import com.example.BancoDeDados.ResponseDTO.InstituicaoRequest;
+import com.example.BancoDeDados.ResponseDTO.IntituicaoResponseDTO;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;

@@ -120,6 +120,13 @@ public class NotaListaService {
     }
 
     /**
+     * Busca todas as notas de um estudante
+     */
+    public List<ListaEstudanteNota> buscarNotasPorEstudante(UUID estudanteId) {
+        return listaEstudanteNotaRepository.findByEstudanteId(estudanteId);
+    }
+
+    /**
      * Atualiza nota automaticamente quando uma resposta é salva
      */
     public void atualizarNotaAposResposta(UUID listaId, UUID estudanteId) {

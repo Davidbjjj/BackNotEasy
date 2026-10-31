@@ -1,4 +1,5 @@
 package com.example.BancoDeDados.ResponseDTO;// LoginResponseDTO.java
+import com.example.BancoDeDados.Model.Role;
 
 import java.util.UUID;
 
