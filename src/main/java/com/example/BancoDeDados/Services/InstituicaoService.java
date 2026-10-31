@@ -6,7 +6,6 @@ import com.example.BancoDeDados.ResponseDTO.InstituicaoResponse;
 import com.example.BancoDeDados.Exceptions.EmailJaCadastradoException;
 import com.example.BancoDeDados.Model.Instituicao;
 import com.example.BancoDeDados.Repositores.InstituicaoRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

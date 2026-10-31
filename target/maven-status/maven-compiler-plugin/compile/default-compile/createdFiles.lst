@@ -1,12 +1,10 @@
 com\example\BancoDeDados\Repositores\AccountRepository.class
-com\example\BancoDeDados\Services\TratarTextoIAService.class
 com\example\BancoDeDados\Services\ExtratorService.class
 com\example\BancoDeDados\dto\QuestaoComAlternativasDTO$ImagemDTO$ImagemDTOBuilder.class
 com\example\BancoDeDados\ResponseDTO\AnaliseIAResponseDTO.class
 com\example\BancoDeDados\Services\ImagemQuestaoAssociadorService.class
 com\example\BancoDeDados\Services\NotaService.class
 com\example\BancoDeDados\ResponseDTO\ListaCompletaResponseDTO.class
-com\example\BancoDeDados\ResponseDTO\NotaListaDTO.class
 com\example\BancoDeDados\dto\DisciplinaSimplesDTO.class
 com\example\BancoDeDados\ResponseDTO\ValidateTokenRequestDTO.class
 com\example\BancoDeDados\Model\ListaEstudanteNota.class
@@ -29,7 +27,6 @@ com\example\BancoDeDados\config\SwaggerConfig.class
 com\example\BancoDeDados\Controller\AuthController.class
 com\example\BancoDeDados\Services\RespostaEstudantesService.class
 com\example\BancoDeDados\Model\Pais.class
-com\example\BancoDeDados\ResponseDTO\ProfessorLoginResponseDTO.class
 com\example\BancoDeDados\Model\RespostaEstudantes.class
 com\example\BancoDeDados\Controller\ProfessorController.class
 com\example\BancoDeDados\Services\PDFService.class
@@ -39,7 +36,6 @@ com\example\BancoDeDados\Services\ListaService.class
 com\example\BancoDeDados\Repositores\EstudanteRepositores.class
 com\example\BancoDeDados\Repositores\NotaRepository.class
 com\example\BancoDeDados\dto\ProfessorSimplesDTO.class
-com\example\BancoDeDados\ResponseDTO\EventoRespostasDTO.class
 com\example\BancoDeDados\ResponseDTO\ProfessorUpdateDTO.class
 com\example\BancoDeDados\service\TikaEmbeddedExtractor.class
 com\example\BancoDeDados\ResponseDTO\MetricasAlunoDTO.class
@@ -63,11 +59,8 @@ com\example\BancoDeDados\Model\Account.class
 com\example\BancoDeDados\dto\ListaSimplesResponse.class
 com\example\BancoDeDados\Model\Questao.class
 com\example\BancoDeDados\ResponseDTO\AnaliseIAListaDTO.class
-com\example\BancoDeDados\ResponseDTO\AuthResponseDTO.class
 com\example\BancoDeDados\ResponseDTO\RespostaQuestaoDTO.class
-com\example\BancoDeDados\ResponseDTO\RespostaRequest.class
 com\example\BancoDeDados\ResponseDTO\ListaResponseDTO.class
-com\example\BancoDeDados\ResponseDTO\EventoResumoResponse.class
 com\example\BancoDeDados\dto\QuestaoComAlternativasDTO$ImagemDTO.class
 com\example\BancoDeDados\service\TextCleanerService.class
 com\example\BancoDeDados\ResponseDTO\ListaAddResponseDTO.class
@@ -82,11 +75,8 @@ com\example\BancoDeDados\Services\IAService.class
 com\example\BancoDeDados\ResponseDTO\MetricasAlunoDTO$EventoDetalhe.class
 com\example\BancoDeDados\config\DatabaseMigrationRunner.class
 com\example\BancoDeDados\ResponseDTO\ApiResponseDTO.class
-com\example\BancoDeDados\extencao\UserInvalid.class
 com\example\BancoDeDados\Repositores\PasswordResetTokenRepository.class
 com\example\BancoDeDados\Repositores\ProfessorRepositores.class
-com\example\BancoDeDados\ResponseDTO\UsuarioResponseDTO.class
-com\example\BancoDeDados\ResponseDTO\InstituicaoResponseDTO.class
 com\example\BancoDeDados\ResponseDTO\ProfessorResponseDTO.class
 com\example\BancoDeDados\Repositores\NotaEventoRepository.class
 com\example\BancoDeDados\dto\EventoListaDTO.class
@@ -97,10 +87,8 @@ com\example\BancoDeDados\ResponseDTO\ListaAtividadeDTO.class
 com\example\BancoDeDados\Repositores\EventoRepository.class
 com\example\BancoDeDados\Exceptions\GlobalExceptionHandler.class
 com\example\BancoDeDados\ResponseDTO\QuestaoResponseDTO.class
-com\example\BancoDeDados\Services\ValidarJsonService.class
 com\example\BancoDeDados\service\QuestionParserService.class
 com\example\BancoDeDados\service\QuestionParserService$BlocoQuestao.class
-com\example\BancoDeDados\ResponseDTO\DashboardDTO.class
 com\example\BancoDeDados\ResponseDTO\QuestaoStatsDTO.class
 com\example\BancoDeDados\config\ModeloServidorLauncher.class
 com\example\BancoDeDados\Controller\DashboardController.class
@@ -110,7 +98,6 @@ com\example\BancoDeDados\dto\QuestaoComAlternativasDTO$AlternativaDTO$Alternativ
 com\example\BancoDeDados\Model\Instituicao.class
 com\example\BancoDeDados\Services\EventoService.class
 com\example\BancoDeDados\Controller\EstudanteController.class
-com\example\BancoDeDados\Services\IntegrarGabaritoService.class
 com\example\BancoDeDados\ResponseDTO\QuestaoDTO.class
 com\example\BancoDeDados\Services\ImagemQuestaoService$DeteccaoExibicao.class
 com\example\BancoDeDados\ResponseDTO\InstituicaoRequest.class
@@ -119,7 +106,6 @@ com\example\BancoDeDados\Repositores\projections\QuestaoStatsProjection.class
 com\example\BancoDeDados\ResponseDTO\AtividadeConcluidaDTO.class
 com\example\BancoDeDados\Services\ModeloQuestoesService.class
 com\example\BancoDeDados\Controller\ImagemController.class
-com\example\BancoDeDados\ResponseDTO\EscolaLoginResponseDTO.class
 com\example\BancoDeDados\ResponseDTO\PLoginResponseDTO.class
 com\example\BancoDeDados\Controller\EventoController.class
 com\example\BancoDeDados\ResponseDTO\EstudanteResponseDTO.class
@@ -140,7 +126,6 @@ com\example\BancoDeDados\ResponseDTO\RespostasListaComNotaDTO.class
 com\example\BancoDeDados\Model\QuestaoAlternativa.class
 com\example\BancoDeDados\Controller\ListaController.class
 com\example\BancoDeDados\ResponseDTO\NotaEventoResponse.class
-com\example\BancoDeDados\ResponseDTO\EmailsPermitidosRequest.class
 com\example\BancoDeDados\Repositores\ListaEstudanteNotaRepository.class
 com\example\BancoDeDados\ResponseDTO\DisciplinaRequestDTO.class
 com\example\BancoDeDados\Services\CustomUserDetailsService.class
@@ -164,14 +149,12 @@ com\example\BancoDeDados\Services\GeminiService.class
 com\example\BancoDeDados\Services\JsonService.class
 com\example\BancoDeDados\service\OcrService.class
 com\example\BancoDeDados\ResponseDTO\IntituicaoResponseDTO.class
-com\example\BancoDeDados\Services\LerGabaritoService.class
 com\example\BancoDeDados\ResponseDTO\RespostaEstudanteDTO.class
 com\example\BancoDeDados\ResponseDTO\RespostaEstudanteQuestaoDTO.class
 com\example\BancoDeDados\Services\JsonIAService.class
 com\example\BancoDeDados\Model\PasswordResetToken.class
 com\example\BancoDeDados\ResponseDTO\ListaEventoResponse.class
 com\example\BancoDeDados\Services\NotaListaService$EstatisticasLista.class
-com\example\BancoDeDados\ResponseDTO\PaisLoginResponseDTO.class
 com\example\BancoDeDados\ResponseDTO\ListaMediaDTO.class
 com\example\BancoDeDados\Controller\PDFController.class
 com\example\BancoDeDados\Security\Configurations.class
@@ -182,9 +165,7 @@ com\example\BancoDeDados\Services\NotaListaService.class
 com\example\BancoDeDados\Services\TokenCleanupService.class
 com\example\BancoDeDados\Services\QuestaoOtimizadoService.class
 com\example\BancoDeDados\service\ParallelOcrService$ProgressCallback.class
-com\example\BancoDeDados\ResponseDTO\EstudanteNotaPendenteResponse.class
 com\example\BancoDeDados\Repositores\InstituicaoRepository.class
-com\example\BancoDeDados\Utils\TextoUtils.class
 com\example\BancoDeDados\Model\NotaEvento$StatusEntrega.class
 com\example\BancoDeDados\Repositores\QuestaoAlternativaRepository.class
 com\example\BancoDeDados\dto\QuestaoComAlternativasDTO$QuestaoComAlternativasDTOBuilder.class

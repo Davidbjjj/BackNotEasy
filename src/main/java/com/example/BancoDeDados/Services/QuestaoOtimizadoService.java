@@ -69,39 +69,6 @@ public class QuestaoOtimizadoService {
     }
 
     /**
-     * ✅ Busca uma questão com alternativas
-     */
-    @Transactional(readOnly = true)
-    public Optional<QuestaoComAlternativasDTO> buscarQuestaoComAlternativasPorId(Integer id) {
-        Optional<Questao> questaoOpt = questaoRepositores.findById(id);
-
-        if (questaoOpt.isEmpty()) {
-            return Optional.empty();
-        }
-
-        Questao q = questaoOpt.get();
-        List<QuestaoAlternativa> alternativas =
-            alternativaRepository.findByQuestaoIdOrderByOrdem(id);
-
-        return Optional.of(QuestaoComAlternativasDTO.builder()
-            .id(q.getId())
-            .cabecalho(q.getCabecalho())
-            .enunciado(q.getEnunciado())
-            .gabarito(q.getGabarito())
-            .alternativas(
-                alternativas.stream()
-                    .map(a -> QuestaoComAlternativasDTO.AlternativaDTO.builder()
-                        .id(a.getId())
-                        .ordem(a.getOrdem())
-                        .texto(a.getTexto())
-                        .build())
-                    .collect(Collectors.toList())
-            )
-            .imagens(converterImagensParaDTO(q.getImagens()))
-            .build());
-    }
-
-    /**
      * ✅ Criar questão com alternativas
      */
     @Transactional

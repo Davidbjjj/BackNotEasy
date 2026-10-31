@@ -1,6 +1,5 @@
 package com.example.BancoDeDados.Controller;
 
-import com.example.BancoDeDados.Model.NotaEvento;
 import com.example.BancoDeDados.ResponseDTO.DesempenhoEstudanteDTO;
 import com.example.BancoDeDados.Services.DashboardService;
 import com.example.BancoDeDados.Services.NotaService;

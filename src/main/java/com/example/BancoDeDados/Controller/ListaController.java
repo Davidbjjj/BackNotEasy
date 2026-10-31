@@ -5,18 +5,13 @@ import com.example.BancoDeDados.Model.Lista;
 import com.example.BancoDeDados.Model.Questao;
 import com.example.BancoDeDados.Repositores.ListaRepository;
 import com.example.BancoDeDados.Repositores.QuestaoRepositores;
-import com.example.BancoDeDados.Repositores.projections.QuestaoListProjection;
 import com.example.BancoDeDados.ResponseDTO.*;
 import com.example.BancoDeDados.Services.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
