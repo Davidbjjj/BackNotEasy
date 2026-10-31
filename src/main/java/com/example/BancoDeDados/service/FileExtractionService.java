@@ -1,7 +1,6 @@
 package com.example.BancoDeDados.service;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.rendering.PDFRenderer;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.parser.AutoDetectParser;
@@ -11,8 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.xml.sax.SAXException;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -125,15 +122,25 @@ public class FileExtractionService {
 
     private void renderPdfPages(Path pdfPath, Path outDir, ExtractionResult result) throws IOException {
         // Usar o novo extrator que pega apenas imagens embutidas
-        List<String> extractedImages = pdfImageExtractor.extractImagesFromPDF(
+        List<PDFImageExtractorService.ImagemExtraida> extractedImages = pdfImageExtractor.extractImagesFromPDF(
             pdfPath.toFile(),
             outDir,
             "img"
         );
 
-        // Adicionar ao resultado
-        for (String imagePath : extractedImages) {
-            result.addSavedFile(imagePath);
+        // Adicionar ao resultado, guardando a posição de cada imagem na página
+        for (PDFImageExtractorService.ImagemExtraida imagem : extractedImages) {
+            result.addSavedFile(imagem.caminho());
+            if (imagem.posicao() != null) {
+                result.addImagePosition(new File(imagem.caminho()).getName(), imagem.posicao());
+            }
+        }
+
+        // Linhas com posição: permitem saber onde cada questão começa e terminar de associar as imagens
+        try {
+            result.setPdfLines(pdfImageExtractor.extractLines(pdfPath.toFile()));
+        } catch (Exception e) {
+            System.err.println("Erro ao extrair posição das linhas do PDF: " + e.getMessage());
         }
 
         System.out.println("Extraídas " + extractedImages.size() + " imagens do PDF");

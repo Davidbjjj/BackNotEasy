@@ -75,6 +75,12 @@ public class IAController {
             List<String> arquivosTemp = (List<String>) resultado.get("arquivosTemporarios");
             @SuppressWarnings("unchecked")
             List<String> textosOcr = (List<String>) resultado.get("textosOcr");
+            @SuppressWarnings("unchecked")
+            List<com.example.BancoDeDados.service.PosicaoImagem> posicoesImagens =
+                (List<com.example.BancoDeDados.service.PosicaoImagem>) resultado.get("posicoesImagens");
+            @SuppressWarnings("unchecked")
+            List<com.example.BancoDeDados.service.LinhaPdf> linhasPdf =
+                (List<com.example.BancoDeDados.service.LinhaPdf>) resultado.get("linhasPdf");
 
             // Converter DTO para Model e salvar
             List<Questao> questoes = converterDTOParaModel(questoesDTO);
@@ -83,9 +89,12 @@ public class IAController {
             // ASSOCIAR IMAGENS ÀS QUESTÕES CORRETAS
             int totalImagensSalvas = 0;
             if (arquivosTemp != null && !arquivosTemp.isEmpty() && !questoes.isEmpty()) {
-                // Agrupar imagens por questão baseado no texto OCR
-                Map<Integer, List<Integer>> imagensPorQuestao =
-                    imagemAssociador.agruparImagensPorQuestao(textosOcr, questoes.size());
+                // PDF: associa pela posição da imagem na página; sem posição, cai no texto OCR
+                boolean temPosicao = posicoesImagens != null && linhasPdf != null && !linhasPdf.isEmpty()
+                    && posicoesImagens.stream().anyMatch(Objects::nonNull);
+                Map<Integer, List<Integer>> imagensPorQuestao = temPosicao
+                    ? imagemAssociador.agruparImagensPorPosicao(questoesDTO, linhasPdf, posicoesImagens)
+                    : imagemAssociador.agruparImagensPorQuestao(textosOcr, questoes.size());
 
                 // Salvar apenas as imagens relevantes para cada questão
                 for (int i = 0; i < questoes.size(); i++) {
@@ -128,6 +137,8 @@ public class IAController {
             // Remover dados temporários da resposta
             resultado.remove("arquivosTemporarios");
             resultado.remove("textosOcr");
+            resultado.remove("posicoesImagens");
+            resultado.remove("linhasPdf");
 
             return ResponseEntity.ok(resultado);
 
@@ -156,12 +167,12 @@ public class IAController {
             questao.setCabecalho(dto.getContexto() != null ? dto.getContexto() : "");
             questao.setEnunciado(dto.getEnunciado());
 
-            // Converter gabarito (letra para índice)
+            // Converter gabarito (letra para índice); null quando não informado
             if (dto.getGabarito() != null && !dto.getGabarito().isEmpty()) {
                 char letra = dto.getGabarito().charAt(0);
                 questao.setGabarito(letra - 'a');
             } else {
-                questao.setGabarito(-1);
+                questao.setGabarito(null);
             }
 
             // Adicionar alternativas
@@ -208,7 +219,7 @@ public class IAController {
             System.out.println(IAService.getRespostaDoGemini());
 
             // Processar e salvar as questões
-            List<Questao> questoes = tratarRespostaIA.processarRespostaIA();
+            List<Questao> questoes = tratarRespostaIA.processarRespostaIA(respostaserviceIA);
 
             // Salvar questões no banco e associar à lista
             listaService.salvarQuestoesComLista(questoes, listaId);

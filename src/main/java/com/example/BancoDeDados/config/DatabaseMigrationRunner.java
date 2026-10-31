@@ -19,6 +19,12 @@ public class DatabaseMigrationRunner implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
+        // As migrações são específicas do PostgreSQL; em H2 o Hibernate cria o schema sozinho
+        if (!isPostgres()) {
+            log.info("Banco não é PostgreSQL (ex.: H2). Migrações ignoradas.");
+            return;
+        }
+
         log.info("========================================");
         log.info("Iniciando migrações do banco de dados...");
         log.info("========================================");
@@ -26,6 +32,9 @@ public class DatabaseMigrationRunner implements ApplicationRunner {
         // Ajustes de tipos para textos longos - apenas na tabela questao
         apply("ALTER TABLE IF EXISTS questao ALTER COLUMN cabecalho TYPE TEXT");
         apply("ALTER TABLE IF EXISTS questao ALTER COLUMN enunciado TYPE TEXT");
+
+        // Gabarito é opcional (questões importadas pelo modelo podem não ter)
+        apply("ALTER TABLE IF EXISTS questao ALTER COLUMN gabarito DROP NOT NULL");
 
         // Índices básicos
         apply("CREATE INDEX IF NOT EXISTS idx_questao_lista_id ON questao (lista_id)");
@@ -56,6 +65,16 @@ public class DatabaseMigrationRunner implements ApplicationRunner {
         log.info("========================================");
         log.info("Migrações concluídas!");
         log.info("========================================");
+    }
+
+    private boolean isPostgres() {
+        try {
+            String produto = jdbcTemplate.execute((java.sql.Connection c) -> c.getMetaData().getDatabaseProductName());
+            return produto != null && produto.toLowerCase().contains("postgres");
+        } catch (Exception e) {
+            log.warn("Não foi possível identificar o banco: {}", e.getMessage());
+            return false;
+        }
     }
 
     private boolean verificarSePrecisaMigrar() {

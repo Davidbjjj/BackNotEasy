@@ -29,7 +29,8 @@ public class Questao {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String enunciado;
 
-    @Column(nullable = false)
+    // null quando a questão foi importada sem gabarito
+    @Column
     private Integer gabarito;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

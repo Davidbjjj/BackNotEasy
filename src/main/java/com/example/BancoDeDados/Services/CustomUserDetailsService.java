@@ -1,6 +1,5 @@
 package com.example.BancoDeDados.Services;
 
-import com.example.BancoDeDados.Model.Account;
 import com.example.BancoDeDados.Repositores.AccountRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;

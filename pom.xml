@@ -115,6 +115,13 @@
 			<scope>runtime</scope>
 		</dependency>
 
+		<!-- H2: banco temporário (perfil "h2") -->
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+
 		<!-- OpenAPI (usar apenas starter 2.x) -->
 		<dependency>
 			<groupId>org.springdoc</groupId>

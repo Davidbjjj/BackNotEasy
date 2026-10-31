@@ -2,6 +2,8 @@ package com.example.BancoDeDados.Services;
 
 import com.example.BancoDeDados.Model.Questao;
 import com.example.BancoDeDados.ResponseDTO.*;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -16,73 +18,60 @@ public class TratarRespostaIAService {
     @Autowired
     private GeminiService geminiService;
 
+    @Autowired
+    private IAService iaService;
+
     private static final Pattern SUG_PATTERN = Pattern.compile("\"sugestao\"\\s*:\\s*\"(.*?)\"", Pattern.DOTALL);
     private static final Pattern PONTOS_PATTERN = Pattern.compile("\"pontosPrincipais\"\\s*:\\s*\\[(.*?)\\]", Pattern.DOTALL);
     private static final Pattern ITEM_PATTERN = Pattern.compile("\"(.*?)\"", Pattern.DOTALL);
 
+    /** Converte a última resposta do modelo guardada em {@link IAService}. */
     public List<Questao> processarRespostaIA() {
+        return processarRespostaIA(iaService.getRespostaDoGemini());
+    }
+
+    /**
+     * Converte o JSON array do modelo em questões:
+     * [{cabecalho, enunciado, alternativas[], gabarito (índice ou null)}].
+     */
+    public List<Questao> processarRespostaIA(String respostaIA) {
         List<Questao> questoes = new ArrayList<>();
-        String respostaIA = geminiService.gerarResposta(""); // receber prompt externo quando necessário
+        if (respostaIA == null || respostaIA.isBlank()) return questoes;
 
-        Pattern blocoJsonPattern = Pattern.compile("```json\\s*(.*?)\\s*```", Pattern.DOTALL);
-        Matcher blocoMatcher = blocoJsonPattern.matcher(respostaIA);
+        try {
+            JSONArray array = new JSONArray(respostaIA);
+            for (int i = 0; i < array.length(); i++) {
+                try {
+                    JSONObject obj = array.getJSONObject(i);
+                    String enunciado = obj.optString("enunciado", "").trim();
+                    if (enunciado.isEmpty()) continue; // enunciado é NOT NULL no banco
 
-        String jsonContent = "";
-        if (blocoMatcher.find()) {
-            jsonContent = blocoMatcher.group(1).trim();
-        } else {
-            jsonContent = respostaIA;
-        }
-        Pattern modeloQuestaoCompleta = Pattern.compile(
-                "\\{\\s*\"cabecalho\":\\s*\"([^\"]*)\",\\s*\"enunciado\":\\s*\"([^\"]*)\",\\s*\"alternativas\":\\s*\\[(.*?)\\],\\s*\"gabarito\":\\s*(\\d+)\\s*\\}",
-                Pattern.DOTALL
-        );
+                    Questao questao = new Questao();
+                    questao.setCabecalho(obj.optString("cabecalho", "").trim());
+                    questao.setEnunciado(enunciado);
 
-        Matcher matcherQuestaoCompleta = modeloQuestaoCompleta.matcher(jsonContent);
+                    List<String> alternativas = new ArrayList<>();
+                    JSONArray alts = obj.optJSONArray("alternativas");
+                    if (alts != null) {
+                        for (int j = 0; j < alts.length(); j++) {
+                            alternativas.add(alts.getString(j).trim());
+                        }
+                    }
+                    questao.setAlternativasTexto(alternativas);
 
-        while (matcherQuestaoCompleta.find()) {
-            try {
-                Questao questao = new Questao();
+                    // null quando o gabarito não é conhecido
+                    questao.setGabarito(obj.isNull("gabarito") ? null : obj.getInt("gabarito"));
 
-                questao.setCabecalho(matcherQuestaoCompleta.group(1).trim());
-                questao.setEnunciado(matcherQuestaoCompleta.group(2).trim());
-
-                String alternativasBrutas = matcherQuestaoCompleta.group(3);
-                List<String> alternativas = processarAlternativas(alternativasBrutas);
-                questao.setAlternativasTexto(alternativas);
-
-                questao.setGabarito(Integer.parseInt(matcherQuestaoCompleta.group(4).trim()));
-
-                questoes.add(questao);
-            } catch (Exception e) {
-                System.err.println("Erro ao processar questão: " + e.getMessage());
+                    questoes.add(questao);
+                } catch (Exception e) {
+                    System.err.println("Erro ao processar questão: " + e.getMessage());
+                }
             }
+        } catch (Exception e) {
+            System.err.println("Resposta do modelo não é um JSON array válido: " + e.getMessage());
         }
 
         return questoes;
-    }
-
-    private List<String> processarAlternativas(String alternativasBrutas) {
-        List<String> alternativas = new ArrayList<>();
-
-        Pattern modeloAlternativas = Pattern.compile("\"([a-eA-E]\\)\\s*[^\"]*)\"");
-        Matcher matcherAlternativas = modeloAlternativas.matcher(alternativasBrutas);
-
-        while (matcherAlternativas.find()) {
-            alternativas.add(matcherAlternativas.group(1).trim());
-        }
-
-        if (alternativas.isEmpty() && alternativasBrutas.contains("\"")) {
-            String[] partes = alternativasBrutas.split("\",\\s*\"");
-            for (String parte : partes) {
-                String alternativa = parte.replace("\"", "").trim();
-                if (!alternativa.isEmpty()) {
-                    alternativas.add(alternativa);
-                }
-            }
-        }
-
-        return alternativas;
     }
 
     // Novo método: monta prompt a partir do request DTO e consulta Gemini via GeminiService

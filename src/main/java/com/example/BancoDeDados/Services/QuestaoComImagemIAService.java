@@ -6,10 +6,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
@@ -30,20 +27,18 @@ public class QuestaoComImagemIAService {
     private final PromptBuilder promptBuilder;
     private final ImagemQuestaoService imagemService;
 
-    @Value("${apikey}")
-    private String apiKey;
-
-    private static final String GEMINI_URL =
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+    private final ModeloQuestoesService modeloQuestoesService;
 
     public QuestaoComImagemIAService(FileExtractionService fileExtractionService,
                                      QuestionParserService questionParserService,
                                      PromptBuilder promptBuilder,
-                                     ImagemQuestaoService imagemService) {
+                                     ImagemQuestaoService imagemService,
+                                     ModeloQuestoesService modeloQuestoesService) {
         this.fileExtractionService = fileExtractionService;
         this.questionParserService = questionParserService;
         this.promptBuilder = promptBuilder;
         this.imagemService = imagemService;
+        this.modeloQuestoesService = modeloQuestoesService;
     }
 
     /**
@@ -63,7 +58,7 @@ public class QuestaoComImagemIAService {
         logger.info("Prompt montado com {} caracteres, {} imagens processadas",
                    promptCompleto.length(), extraction.getImageOcr().size());
 
-        // 3. Enviar para IA (Gemini)
+        // 3. Enviar para o modelo (modelo.joblib)
         String respostaIA = enviarParaGemini(promptCompleto);
 
         // 4. Parse da resposta da IA
@@ -90,7 +85,18 @@ public class QuestaoComImagemIAService {
         resultado.put("promptEnviado", promptCompleto.substring(0, Math.min(500, promptCompleto.length())) + "...");
         resultado.put("imagensExtraidas", imagensInfo); // Adiciona informações das imagens
         resultado.put("arquivosTemporarios", extraction.getSavedFiles()); // Caminhos para salvar no banco
-        resultado.put("textosOcr", new ArrayList<>(extraction.getImageOcr().values())); // Textos OCR ordenados
+
+        // OCR e posição na mesma ordem de arquivosTemporarios (o mapa de OCR não preserva a ordem)
+        List<String> textosOcr = new ArrayList<>();
+        List<PosicaoImagem> posicoes = new ArrayList<>();
+        for (String filePath : extraction.getSavedFiles()) {
+            String nome = new File(filePath).getName();
+            textosOcr.add(extraction.getImageOcr().getOrDefault(nome, ""));
+            posicoes.add(extraction.getImagePositions().get(nome));
+        }
+        resultado.put("textosOcr", textosOcr);
+        resultado.put("posicoesImagens", posicoes);
+        resultado.put("linhasPdf", extraction.getPdfLines());
 
         logger.info("Processamento concluído: {} questões extraídas pela IA, {} imagens processadas",
                    questoesExtraidas.size(), extraction.getSavedFiles().size());
@@ -99,115 +105,58 @@ public class QuestaoComImagemIAService {
     }
 
     /**
-     * Monta prompt inteligente combinando texto principal + OCR das imagens
+     * Monta o texto a ser analisado pelo modelo: texto principal do documento
+     * seguido do OCR das imagens (ordenado pelo nome do arquivo).
      */
     private String montarPromptComImagens(ExtractionResult extraction) {
-        StringBuilder prompt = new StringBuilder();
+        StringBuilder texto = new StringBuilder();
 
-        // Instrução para a IA
-        prompt.append("Você é um especialista em extrair questões de provas e exercícios. ");
-        prompt.append("Analise o texto abaixo que foi extraído de um documento usando OCR. ");
-        prompt.append("Algumas partes podem ter vindo de imagens renderizadas das páginas.\n\n");
-
-        // Texto principal
         if (extraction.getText() != null && !extraction.getText().isBlank()) {
-            prompt.append("=== TEXTO PRINCIPAL DO DOCUMENTO ===\n");
-            prompt.append(extraction.getText()).append("\n\n");
+            texto.append(extraction.getText()).append("\n\n");
         }
 
-        // OCR das imagens (ordenado por página)
-        if (!extraction.getImageOcr().isEmpty()) {
-            prompt.append("=== TEXTO EXTRAÍDO DAS PÁGINAS (OCR) ===\n");
+        String textoPrincipal = extraction.getText();
+        extraction.getImageOcr().entrySet().stream()
+            .sorted(Map.Entry.comparingByKey())
+            .forEach(entry -> {
+                String ocr = entry.getValue();
+                if (ocr == null || ocr.isBlank()) return;
+                // Páginas sem imagem embutida são renderizadas e passam pelo OCR: se o texto
+                // do PDF já contém esse conteúdo, anexá-lo duplicaria as questões.
+                if (jaContidoNoTexto(ocr, textoPrincipal)) {
+                    logger.info("OCR de {} ignorado: conteúdo já presente no texto do PDF", entry.getKey());
+                    return;
+                }
+                texto.append(ocr).append("\n\n");
+            });
 
-            extraction.getImageOcr().entrySet().stream()
-                .sorted(Map.Entry.comparingByKey())
-                .forEach(entry -> {
-                    if (!entry.getValue().isBlank()) {
-                        prompt.append("\n[Página: ").append(entry.getKey()).append("]\n");
-                        prompt.append(entry.getValue()).append("\n");
-                    }
-                });
+        return texto.toString();
+    }
 
-            prompt.append("\n");
+    /** True se (quase) todas as palavras do OCR já aparecem no texto principal. */
+    private boolean jaContidoNoTexto(String ocr, String principal) {
+        if (principal == null || principal.isBlank()) return false;
+        java.util.Set<String> palavrasPrincipal = new java.util.HashSet<>(
+                java.util.Arrays.asList(principal.toLowerCase().split("[^\\p{L}\\p{N}]+")));
+        String[] palavrasOcr = ocr.toLowerCase().split("[^\\p{L}\\p{N}]+");
+        int total = 0, presentes = 0;
+        for (String p : palavrasOcr) {
+            if (p.isEmpty()) continue;
+            total++;
+            if (palavrasPrincipal.contains(p)) presentes++;
         }
-
-        // Instruções de formatação
-        prompt.append("\n=== INSTRUÇÕES ===\n");
-        prompt.append("Extraia TODAS as questões encontradas e formate no seguinte padrão JSON:\n");
-        prompt.append("[\n");
-        prompt.append("  {\n");
-        prompt.append("    \"cabecalho\": \"(Fonte - Ano)\",\n");
-        prompt.append("    \"enunciado\": \"Texto completo da questão\",\n");
-        prompt.append("    \"alternativas\": [\n");
-        prompt.append("      \"a) Texto da alternativa A\",\n");
-        prompt.append("      \"b) Texto da alternativa B\",\n");
-        prompt.append("      \"c) Texto da alternativa C\",\n");
-        prompt.append("      \"d) Texto da alternativa D\",\n");
-        prompt.append("      \"e) Texto da alternativa E\"\n");
-        prompt.append("    ],\n");
-        prompt.append("    \"gabarito\": 0\n");
-        prompt.append("  }\n");
-        prompt.append("]\n\n");
-        prompt.append("IMPORTANTE:\n");
-        prompt.append("- O campo 'gabarito' é o índice da alternativa correta (0=a, 1=b, 2=c, etc.)\n");
-        prompt.append("- Se não souber o gabarito, use -1\n");
-        prompt.append("- Mantenha a formatação exata do JSON\n");
-        prompt.append("- Extraia TODAS as questões, mesmo que estejam em partes diferentes do texto\n");
-        prompt.append("- Se houver texto de OCR duplicado em 'Texto Principal' e 'Páginas', use a versão mais completa\n");
-
-        return prompt.toString();
+        return total > 0 && presentes >= total * 0.9;
     }
 
     /**
-     * Envia prompt para Gemini AI
+     * Envia o texto ao modelo (modelo.joblib via ml-service).
+     * Devolve um JSON array: [{cabecalho, enunciado, alternativas[], gabarito (índice ou null)}]
      */
-    private String enviarParaGemini(String prompt) throws IOException {
-        RestTemplate restTemplate = new RestTemplate();
-
-        // Dividir se muito grande (limite Gemini ~30k tokens ≈ 100k chars)
-        if (prompt.length() > 100000) {
-            logger.warn("Prompt muito grande ({}), será truncado", prompt.length());
-            prompt = prompt.substring(0, 100000) + "\n\n[Texto truncado devido ao tamanho]";
-        }
-
-        JSONObject requestPayload = new JSONObject();
-        JSONObject content = new JSONObject();
-        JSONObject part = new JSONObject();
-
-        part.put("text", prompt);
-        content.append("parts", part);
-        requestPayload.append("contents", content);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("x-goog-api-key", apiKey);
-
-        HttpEntity<String> entity = new HttpEntity<>(requestPayload.toString(), headers);
-
-        try {
-            logger.info("Enviando requisição para Gemini AI...");
-            ResponseEntity<String> response = restTemplate.exchange(
-                    GEMINI_URL, HttpMethod.POST, entity, String.class);
-
-            JSONObject jsonResponse = new JSONObject(response.getBody());
-            JSONArray candidates = jsonResponse.optJSONArray("candidates");
-
-            if (candidates != null && candidates.length() > 0) {
-                JSONObject contentObj = candidates.getJSONObject(0).getJSONObject("content");
-                JSONArray parts = contentObj.getJSONArray("parts");
-                if (parts.length() > 0) {
-                    String respostaIA = parts.getJSONObject(0).getString("text");
-                    logger.info("Resposta recebida da IA: {} caracteres", respostaIA.length());
-                    return respostaIA;
-                }
-            }
-
-            throw new IOException("Resposta da IA vazia ou inválida");
-
-        } catch (Exception e) {
-            logger.error("Erro ao comunicar com Gemini AI: {}", e.getMessage());
-            throw new IOException("Falha ao enviar para IA: " + e.getMessage(), e);
-        }
+    private String enviarParaGemini(String texto) throws IOException {
+        logger.info("Enviando texto ({} caracteres) para o modelo de questões...", texto.length());
+        String resposta = modeloQuestoesService.extrairQuestoes(texto).toString();
+        logger.info("Resposta recebida do modelo: {} caracteres", resposta.length());
+        return resposta;
     }
 
     /**
@@ -245,13 +194,15 @@ public class QuestaoComImagemIAService {
                     }
                 }
 
-                // Gabarito
-                int gabaritoIdx = questaoJson.optInt("gabarito", -1);
-                if (gabaritoIdx >= 0 && gabaritoIdx < 5) {
-                    questao.setGabarito(String.valueOf((char)('a' + gabaritoIdx)));
+                // Gabarito (null quando o texto não trouxe)
+                if (!questaoJson.isNull("gabarito")) {
+                    int gabaritoIdx = questaoJson.optInt("gabarito", -1);
+                    if (gabaritoIdx >= 0 && gabaritoIdx < 5) {
+                        questao.setGabarito(String.valueOf((char)('a' + gabaritoIdx)));
+                    }
                 }
 
-                questao.setConfianca(1.0); // Confiança alta - veio da IA
+                questao.setConfianca(questaoJson.optDouble("probabilidade", 1.0));
                 questoes.add(questao);
             }
 
