@@ -9,6 +9,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @SpringBootApplication(exclude = {SecurityAutoConfiguration.class})
 @EnableScheduling
 @EnableCaching
+
 public class BancoDeDadosApplication {
 
 	public static void main(String[] args) {
