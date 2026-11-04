@@ -107,19 +107,30 @@ public class ImagemQuestaoAssociadorService {
 
         for (int q = 0; q < questoes.size(); q++) {
             var questao = questoes.get(q);
-            String base = (questao.getContexto() == null ? "" : questao.getContexto()) + " "
-                    + (questao.getEnunciado() == null ? "" : questao.getEnunciado());
-            String chaveTexto = normalizar(base);
-            chaveTexto = chaveTexto.substring(0, Math.min(18, chaveTexto.length()));
-            if (chaveTexto.length() < 6) {
-                continue;
+            String contexto = questao.getContexto() == null ? "" : questao.getContexto();
+            // O modelo devolve "Não informado" quando a questão não tem cabeçalho; isso não existe no PDF
+            if (normalizar(contexto).startsWith("naoinformado")) {
+                contexto = "";
             }
+            String enunciado = questao.getEnunciado() == null ? "" : questao.getEnunciado();
 
-            for (int l = proximaLinha; l < linhas.size(); l++) {
-                if (normalizar(linhas.get(l).texto()).startsWith(chaveTexto)) {
-                    inicios[q] = chave(linhas.get(l).pagina(), linhas.get(l).topo());
-                    proximaLinha = l + 1;
-                    break;
+            // Primeiro cabeçalho+enunciado; se a linha do cabeçalho vier separada, só o enunciado
+            String[] candidatas = {
+                    chavePrefixo(contexto + " " + enunciado),
+                    chavePrefixo(enunciado)
+            };
+
+            buscar:
+            for (String chaveTexto : candidatas) {
+                if (chaveTexto.length() < 6) {
+                    continue;
+                }
+                for (int l = proximaLinha; l < linhas.size(); l++) {
+                    if (normalizar(linhas.get(l).texto()).startsWith(chaveTexto)) {
+                        inicios[q] = chave(linhas.get(l).pagina(), linhas.get(l).topo());
+                        proximaLinha = l + 1;
+                        break buscar;
+                    }
                 }
             }
             if (Double.isNaN(inicios[q])) {
@@ -132,6 +143,11 @@ public class ImagemQuestaoAssociadorService {
     /** Posição linear no documento: parte inteira = página, parte fracionária = posição na página. */
     private double chave(int pagina, double proporcaoNaPagina) {
         return pagina + Math.min(Math.max(proporcaoNaPagina, 0), 0.999);
+    }
+
+    private String chavePrefixo(String texto) {
+        String n = normalizar(texto);
+        return n.substring(0, Math.min(18, n.length()));
     }
 
     private String normalizar(String texto) {

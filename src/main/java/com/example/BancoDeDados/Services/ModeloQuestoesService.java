@@ -12,7 +12,9 @@ import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -47,6 +49,10 @@ public class ModeloQuestoesService {
         JSONArray questoes = new JSONArray();
         if (texto == null || texto.isBlank()) return questoes;
 
+        // Bloco de gabarito no fim do documento ("GABARITO:\n1)A\n2)E...") sai do texto do modelo
+        Map<Integer, String> gabaritoPorNumero = new HashMap<>();
+        texto = extrairBlocoGabarito(texto, gabaritoPorNumero);
+
         // Segmentação local só para ler as linhas de gabarito; o documento inteiro
         // (sem essas linhas) vai ao serviço do modelo em UMA única requisição.
         List<String> semGabarito = new ArrayList<>();
@@ -70,13 +76,18 @@ public class ModeloQuestoesService {
             if (analise == null || !analise.optBoolean("is_question", false)) continue;
 
             JSONArray alternativas = analise.optJSONArray("alternativas");
-            Object gabarito = JSONObject.NULL;
+            limparAlternativas(alternativas);
+
+            // Prioridade: "Gabarito: X" no próprio bloco > bloco de gabarito do documento > o que o modelo devolveu
             String letra = mapeavel ? letras.get(i) : null;
-            if (letra != null && alternativas != null) {
-                int idx = letra.charAt(0) - 'a';
-                if (idx >= 0 && idx < alternativas.length()) gabarito = idx;
+            if (letra == null && !gabaritoPorNumero.isEmpty()) {
+                // Número da questão: o do cabeçalho ("3) (Enem)") ou, sem ele, a posição
+                Matcher num = Pattern.compile("^\\D*?(\\d{1,3})").matcher(analise.optString("cabecalho", ""));
+                letra = gabaritoPorNumero.get(num.find() ? Integer.parseInt(num.group(1)) : i + 1);
             }
-            analise.put("gabarito", gabarito);
+            int idx = letra != null ? letra.charAt(0) - 'a' : indiceDoModelo(analise.opt("gabarito"));
+            boolean valido = alternativas != null && idx >= 0 && idx < alternativas.length();
+            analise.put("gabarito", valido ? (Object) idx : JSONObject.NULL);
             questoes.put(analise);
         }
         return questoes;
@@ -160,6 +171,80 @@ public class ModeloQuestoesService {
         }
         if (blocos.isEmpty()) blocos.add(texto);
         return blocos;
+    }
+
+    /** "Gabarito", "Gabarito:", "Respostas -", com ou sem itens na mesma linha. */
+    private static final Pattern CABECALHO_GABARITO = Pattern.compile(
+            "^[ \\t]*(?:gabaritos?|respostas?)\\b[ \\t]*[:\\-–]?", FLAGS);
+    /**
+     * Um item do gabarito: "1)A", "2 - B", "3.c", "4: (d)", "5E". Itens podem vir um por linha
+     * ou na mesma linha, separados por espaço, vírgula ou ponto e vírgula (tolera o ruído do OCR).
+     * A letra não pode ser início de palavra ("2 A área...").
+     */
+    private static final Pattern ITEM_GABARITO = Pattern.compile(
+            "[\\s,;|]*(\\d{1,3})[ \\t]*[).:\\-–]?[ \\t]*\\(?([a-eA-E])\\)?(?![\\p{L}\\p{N}])");
+    /** Resto de gabarito que o modelo deixou colado numa alternativa. */
+    private static final Pattern GABARITO_NA_ALTERNATIVA = Pattern.compile(
+            "\\s*\\b(?:gabaritos?|respostas?)\\b\\s*[:\\-–]?\\s*\\d{1,3}\\s*[).:\\-–]?\\s*\\(?[a-eA-E]\\b.*$",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE | Pattern.DOTALL);
+
+    /**
+     * Lê blocos "GABARITO:" (itens por linha ou na mesma linha) em qualquer ponto do texto,
+     * inclusive no OCR, e os remove. O que vier depois do último bloco (ex.: OCR de figuras)
+     * também sai, a menos que traga alternativas.
+     */
+    static String extrairBlocoGabarito(String texto, Map<Integer, String> destino) {
+        StringBuilder saida = new StringBuilder();
+        int copiado = 0;
+        boolean cortouFinal = false;
+        Matcher h = CABECALHO_GABARITO.matcher(texto);
+        int busca = 0;
+        while (h.find(busca)) {
+            busca = h.end();
+            Matcher item = ITEM_GABARITO.matcher(texto);
+            int pos = h.end();
+            int lidos = 0;
+            item.region(pos, texto.length());
+            while (item.lookingAt()) {
+                destino.putIfAbsent(Integer.parseInt(item.group(1)), item.group(2).toLowerCase());
+                lidos++;
+                pos = item.end();
+                item.region(pos, texto.length());
+            }
+            if (lidos == 0) continue; // "Gabarito comentado", "Resposta: C" etc.
+            saida.append(texto, copiado, h.start());
+            copiado = pos;
+            busca = pos;
+            cortouFinal = true;
+        }
+        if (!cortouFinal) return texto;
+        String resto = texto.substring(copiado);
+        // Sem outro bloco de gabarito adiante, o resto é ruído, salvo se parecer conteúdo de questão
+        saida.append(ALT.matcher(resto).find() ? "\n\n" + resto : "");
+        return saida.toString();
+    }
+
+    /** Remove gabarito colado no fim de uma alternativa. */
+    private static void limparAlternativas(JSONArray alternativas) {
+        if (alternativas == null) return;
+        for (int i = 0; i < alternativas.length(); i++) {
+            String alt = alternativas.optString(i, null);
+            if (alt == null) continue;
+            String limpa = GABARITO_NA_ALTERNATIVA.matcher(alt).replaceFirst("").strip();
+            if (!limpa.equals(alt)) alternativas.put(i, limpa);
+        }
+    }
+
+    /** Gabarito devolvido pelo modelo: índice (0=a), letra ("C", "c)") ou número em texto. -1 se ausente/inválido. */
+    private static int indiceDoModelo(Object valor) {
+        if (valor instanceof Number) return ((Number) valor).intValue();
+        if (valor instanceof String) {
+            String s = ((String) valor).strip();
+            if (s.matches("\\d{1,2}")) return Integer.parseInt(s);
+            Matcher m = Pattern.compile("^\\(?([a-eA-E])\\)?\\.?$").matcher(s);
+            if (m.matches()) return Character.toLowerCase(m.group(1).charAt(0)) - 'a';
+        }
+        return -1;
     }
 
     /** Remove uma linha explícita de gabarito ("Gabarito: C") e devolve {bloco, letra|null}. */
