@@ -40,6 +40,11 @@ public class Estudante implements UserDetails {
     private String email;
     @Column(nullable = false)
     private String senha;
+
+    // Fuso IANA do aluno (ex.: America/Sao_Paulo). Null = usa o padrão do dashboard.
+    @Column(name = "fuso_horario")
+    private String fusoHorario;
+
     @ManyToMany
     @JoinTable(
             name = "estudante_materia",

@@ -7,7 +7,12 @@ import java.util.UUID;
 import com.example.BancoDeDados.Model.Account;
 import com.example.BancoDeDados.Model.Role;
 import com.example.BancoDeDados.Repositores.AccountRepository;
+import com.example.BancoDeDados.ResponseDTO.DashboardAlunoDTO;
 import com.example.BancoDeDados.ResponseDTO.DisciplinaRequestDTO;
+import com.example.BancoDeDados.Services.DashboardAlunoService;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.server.ResponseStatusException;
 import com.example.BancoDeDados.ResponseDTO.EstudanteListagemDTO;
 import com.example.BancoDeDados.Services.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,6 +58,9 @@ public class EstudanteController {
 
     @Autowired
     private EmailService emailService;
+
+    @Autowired
+    private DashboardAlunoService dashboardAlunoService;
 
     public EstudanteController(TokenService tokenService, AuthenticationManager authenticationManager,
                                PasswordEncoder passwordEncoder, EstudanteRepositores estudanteRepositores) {
@@ -151,6 +159,35 @@ public class EstudanteController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(null);
+        }
+    }
+
+    /**
+     * Dashboard pessoal (FE-101). Só o próprio aluno logado pode consultar.
+     * Fuso: header X-Timezone (IANA) > Estudante.fusoHorario > America/Sao_Paulo.
+     */
+    @GetMapping("/{id}/dashboard")
+    public ResponseEntity<DashboardAlunoDTO> dashboard(
+            @PathVariable UUID id,
+            @RequestHeader(value = "X-Timezone", required = false) String fusoHorario,
+            Authentication authentication) {
+
+        if (authentication == null || authentication instanceof AnonymousAuthenticationToken
+                || !authentication.isAuthenticated()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Autenticação necessária");
+        }
+
+        // O principal é o e-mail (subject do JWT); só alunos têm Estudante com esse e-mail.
+        Estudante logado = estudanteRepositores.findByEmail(authentication.getName())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Acesso restrito a alunos"));
+        if (!logado.getId().equals(id)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Você só pode ver o seu próprio dashboard");
+        }
+
+        try {
+            return ResponseEntity.ok(dashboardAlunoService.montar(id, fusoHorario));
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
     }
 

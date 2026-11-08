@@ -3,6 +3,7 @@ package com.example.BancoDeDados.Repositores;
 import com.example.BancoDeDados.Model.Estudante;
 import com.example.BancoDeDados.Model.Evento;
 import com.example.BancoDeDados.Model.NotaEvento;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -33,6 +34,15 @@ public interface NotaEventoRepository extends JpaRepository<NotaEvento, UUID> {
             @Param("endDate") LocalDateTime endDate,
             @Param(value = "disciplinaId") UUID disciplinaId
     );
+
+    // Dashboard pessoal: próximas entregas pendentes do aluno (mais próximas primeiro; limite via Pageable)
+    @Query("SELECT ne FROM NotaEvento ne JOIN FETCH ne.evento e LEFT JOIN FETCH e.disciplina " +
+            "WHERE ne.estudante.id = :estudanteId AND ne.statusEntrega = :status AND e.data >= :agora " +
+            "ORDER BY e.data ASC")
+    List<NotaEvento> findProximasEntregas(@Param("estudanteId") UUID estudanteId,
+                                          @Param("status") NotaEvento.StatusEntrega status,
+                                          @Param("agora") LocalDateTime agora,
+                                          Pageable pageable);
 
     // Buscar notas de eventos de um estudante em uma disciplina específica
     @Query("SELECT ne FROM NotaEvento ne WHERE ne.estudante.id = :estudanteId AND ne.evento.disciplina.id = :disciplinaId")
