@@ -6,6 +6,7 @@ import com.example.BancoDeDados.Model.RespostaEstudantes;
 import com.example.BancoDeDados.ResponseDTO.AlunoMediaDTO;
 import com.example.BancoDeDados.ResponseDTO.ListaMediaDTO;
 import com.example.BancoDeDados.ResponseDTO.AtividadeConcluidaDTO;
+import com.example.BancoDeDados.Repositores.projections.AtividadeListaProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -94,6 +95,17 @@ public interface RespostaEstudantesRepository extends JpaRepository<RespostaEstu
             "GROUP BY e.id, e.nome, d.id, d.nome " +
             "ORDER BY COUNT(DISTINCT l.id) DESC")
     List<AtividadeConcluidaDTO> findAtividadesConcluidasByDisciplina(@Param("disciplinaId") UUID disciplinaId);
+
+    // Dashboard pessoal: instante da última resposta do aluno em cada lista
+    @Query("SELECT q.lista.id AS listaId, MAX(re.atualizadoEm) AS ultimaAtividade " +
+            "FROM RespostaEstudantes re JOIN re.questao q " +
+            "WHERE re.estudante.id = :estudanteId AND q.lista IS NOT NULL " +
+            "GROUP BY q.lista.id")
+    List<AtividadeListaProjection> findUltimaAtividadePorLista(@Param("estudanteId") UUID estudanteId);
+
+    // Dashboard pessoal: todos os instantes de atividade (criação e edição) para calcular a sequência
+    @Query("SELECT re.criadoEm, re.atualizadoEm FROM RespostaEstudantes re WHERE re.estudante.id = :estudanteId")
+    List<Object[]> findInstantesAtividade(@Param("estudanteId") UUID estudanteId);
 
     // Contar questões respondidas por estudante em uma lista
     @Query("SELECT COUNT(re) FROM RespostaEstudantes re " +

@@ -559,7 +559,9 @@ public class EventoService {
                     var notaListaOpt = notaListaService.buscarNotaEstudanteOptional(listaId, estudanteId);
                     if (notaListaOpt != null && notaListaOpt.isPresent()) {
                         ListaEstudanteNota notaLista = notaListaOpt.get();
-                        if (notaLista.getNota() != null) {
+                        // Só lista finalizada conta como entrega: uma lista em andamento já tem nota
+                        // parcial, e apenas abrir a atividade não pode marcá-la como ENTREGUE.
+                        if (notaLista.isFinalizada() && notaLista.getNota() != null) {
                             // Buscar ou criar NotaEvento
                             NotaEvento notaEvento = notaEventoRepository.findByEstudanteAndEvento(estudante, eventoEntity)
                                     .orElseGet(() -> {
