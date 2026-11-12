@@ -42,6 +42,16 @@ public class Disciplina {
     @OneToMany(mappedBy = "disciplina", cascade = CascadeType.ALL)
     private List<Evento> eventos = new ArrayList<>();
 
+    /** FE-304: disciplina arquivada mantém o histórico, mas só para leitura. */
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean arquivada = false;
+
+    public void exigirAtiva() {
+        if (arquivada) {
+            throw new IllegalArgumentException("A disciplina \"" + nome + "\" está arquivada: só leitura.");
+        }
+    }
+
 
     public Disciplina(MateriaResponseDTO dto, Professor professor, Instituicao instituicao) {
         this.nome = dto.getNome();

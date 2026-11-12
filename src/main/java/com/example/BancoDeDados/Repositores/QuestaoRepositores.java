@@ -36,4 +36,8 @@ public interface QuestaoRepositores extends JpaRepository<Questao, Integer> {
             "FROM questao q LEFT JOIN resposta_estudantes re ON re.questao_id = q.id " +
             "WHERE q.lista_id IN :listaIds GROUP BY q.lista_id, q.id", nativeQuery = true)
     List<QuestaoStatsProjection> aggregateStatsByListaIds(@Param("listaIds") List<UUID> listaIds);
+
+    // FE-202: todas as questoes com lista e disciplina (filtro por professor e busca sao feitos no servico)
+    @Query("SELECT q FROM Questao q JOIN FETCH q.lista l LEFT JOIN FETCH l.disciplina LEFT JOIN FETCH l.professor")
+    List<Questao> findAllComLista();
 }

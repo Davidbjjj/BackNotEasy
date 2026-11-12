@@ -61,7 +61,11 @@ public class RespostaEstudantesService {
         Estudante estudante = estudanteRepository.findById(enviarRespostaDTO.estudanteId())
                 .orElseThrow(() -> new IllegalArgumentException("Estudante não encontrado."));
 
-        if (enviarRespostaDTO.alternativa() < 0 ||
+        notaListaService.validarRespostaPermitida(enviarRespostaDTO.listaId(), estudante.getId());
+
+        if (questao.isAberta()) {
+            validarTexto(enviarRespostaDTO.textoResposta());
+        } else if (enviarRespostaDTO.alternativa() == null || enviarRespostaDTO.alternativa() < 0 ||
                 enviarRespostaDTO.alternativa() >= questao.getAlternativas().size()) {
             throw new IllegalArgumentException("Alternativa inválida para esta questão.");
         }
@@ -78,12 +82,39 @@ public class RespostaEstudantesService {
             r.setEstudante(estudante);
             return r;
         });
-        resposta.setAlternativa(enviarRespostaDTO.alternativa());
-        resposta.setResposta(resposta.isCorreta());
+        aplicarResposta(resposta, questao, enviarRespostaDTO.alternativa(), enviarRespostaDTO.textoResposta());
 
         respostaEstudantesRepository.save(resposta);
 
         notaListaService.atualizarNotaAposResposta(enviarRespostaDTO.listaId(), estudante.getId());
+    }
+
+    private static void validarTexto(String texto) {
+        if (texto == null || texto.isBlank()) {
+            throw new IllegalArgumentException("Escreva a resposta da questão aberta.");
+        }
+        if (texto.length() > 10000) {
+            throw new IllegalArgumentException("A resposta aberta pode ter no máximo 10.000 caracteres.");
+        }
+    }
+
+    /** Objetiva: corrige na hora. Aberta: guarda o texto e zera a correção anterior (volta à fila). */
+    private static void aplicarResposta(RespostaEstudantes resposta, Questao questao, Integer alternativa, String texto) {
+        if (questao.isAberta()) {
+            boolean mudou = !texto.equals(resposta.getTextoResposta());
+            resposta.setTextoResposta(texto);
+            resposta.setAlternativa(null);
+            if (mudou) {
+                resposta.setResposta(null);
+                resposta.setNotaQuestao(null);
+                resposta.setFeedback(null);
+                resposta.setCorrigidaEm(null);
+            }
+        } else {
+            resposta.setAlternativa(alternativa);
+            resposta.setTextoResposta(null);
+            resposta.setResposta(resposta.isCorreta());
+        }
     }
 
     /**
@@ -238,6 +269,8 @@ public class RespostaEstudantesService {
             throw new IllegalArgumentException("Lista não encontrada.");
         }
 
+        notaListaService.validarRespostaPermitida(listaId, estudanteId);
+
         // Busca todas as questões da lista de uma vez
         List<Questao> questõesDaLista = questaoRepository.findByLista_Id(listaId);
 
@@ -270,7 +303,10 @@ public class RespostaEstudantesService {
                 throw new IllegalArgumentException("Questão " + respostaDTO.questaoId() + " não pertence à lista.");
             }
 
-            if (respostaDTO.alternativa() < 0 || respostaDTO.alternativa() >= questao.getAlternativas().size()) {
+            if (questao.isAberta()) {
+                validarTexto(respostaDTO.textoResposta());
+            } else if (respostaDTO.alternativa() == null || respostaDTO.alternativa() < 0
+                    || respostaDTO.alternativa() >= questao.getAlternativas().size()) {
                 throw new IllegalArgumentException("Alternativa inválida para a questão " + respostaDTO.questaoId());
             }
 
@@ -282,8 +318,7 @@ public class RespostaEstudantesService {
                 resposta.setEstudante(estudanteRepository.getReferenceById(estudanteId));
             }
 
-            resposta.setAlternativa(respostaDTO.alternativa());
-            resposta.setResposta(resposta.isCorreta());
+            aplicarResposta(resposta, questao, respostaDTO.alternativa(), respostaDTO.textoResposta());
 
             respostasParaSalvar.add(resposta);
         }

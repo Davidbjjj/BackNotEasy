@@ -33,6 +33,37 @@ public class Questao {
     @Column
     private Integer gabarito;
 
+    // Assunto/tópico da questão (texto livre), usado na revisão do aluno
+    @Column(length = 255)
+    private String assunto;
+
+    // Explicação do gabarito, exibida ao aluno só quando o gabarito está liberado
+    @Column(columnDefinition = "TEXT")
+    private String explicacao;
+
+    // FE-201: "OBJETIVA" (padrão; null conta como objetiva) ou "ABERTA" (resposta escrita, corrigida pelo professor)
+    @Column(length = 20)
+    private String tipo;
+
+    // FE-201: critérios de correção de uma questão aberta (visível só ao professor)
+    @Column(columnDefinition = "TEXT")
+    private String rubrica;
+
+    // FE-202: "FACIL" | "MEDIA" | "DIFICIL" (null = não classificada)
+    @Column(length = 10)
+    private String dificuldade;
+
+    // FE-202: etiquetas livres para busca no banco de questões
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(name = "questao_tags", joinColumns = @JoinColumn(name = "questao_id"))
+    @Column(name = "tag", length = 60)
+    @Builder.Default
+    private java.util.Set<String> tags = new java.util.LinkedHashSet<>();
+
+    public boolean isAberta() {
+        return "ABERTA".equals(tipo);
+    }
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "lista_id", nullable = false)
     private Lista lista;

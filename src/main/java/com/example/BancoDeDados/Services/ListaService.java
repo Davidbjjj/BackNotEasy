@@ -47,6 +47,23 @@ public class ListaService {
     @Autowired
     private RespostaEstudantesRepository respostaEstudantesRepository;
 
+    @Autowired
+    private NotificacaoService notificacaoService;
+
+    @Autowired
+    private ConfiguracaoInstituicaoService configuracaoInstituicao;
+
+    /** LISTA_NOVA para cada aluno informado. */
+    private void notificarListaNova(Lista lista, Disciplina disciplina, List<Estudante> alunos) {
+        String nomeDisciplina = disciplina != null && disciplina.getNome() != null ? disciplina.getNome() + ": " : "";
+        String msg = nomeDisciplina + lista.getTitulo() + " está disponível.";
+        String link = "/listas/" + lista.getId() + "/questoes";
+        for (Estudante e : alunos) {
+            notificacaoService.criarSeNaoExistir(e.getId(), TipoNotificacao.LISTA_NOVA,
+                    "Nova lista publicada", msg, link);
+        }
+    }
+
     public List<AlunoNotaDTO> getNotasByListaId(UUID listaId) {
         List<ListaEstudanteNota> notas = listaEstudanteNotaRepository.findByListaId(listaId);
         return notas.stream()
@@ -183,6 +200,7 @@ public class ListaService {
         lista.setTitulo(titulo);
         lista.setDisciplina(disciplina);
         lista.setProfessor(professor);
+        configuracaoInstituicao.aplicarPadroes(lista, disciplina.getInstituicao());
 
         // 5. Inicializa os estudantes da lista com os estudantes da disciplina
         if (disciplina.getEstudantes() != null && !disciplina.getEstudantes().isEmpty()) {
@@ -193,6 +211,7 @@ public class ListaService {
 
         // 6. Salva e retorna DTO
         Lista listaSalva = listaRepository.save(lista);
+        notificarListaNova(listaSalva, disciplina, new ArrayList<>(listaSalva.getEstudantes()));
         return convertToDTO(listaSalva);
     }
 
@@ -208,10 +227,12 @@ public class ListaService {
                 .orElseThrow(() -> new RuntimeException("Disciplina não encontrada"));
 
         // Adiciona cada estudante à lista
+        List<Estudante> novos = new ArrayList<>();
         for (Estudante estudante : disciplina.getEstudantes()) {
             try {
                 if (!lista.getEstudantes().contains(estudante)) {
                     lista.getEstudantes().add(estudante);
+                    novos.add(estudante);
                     System.out.println("Estudante " + estudante.getNome() + " adicionado à lista");
                 }
             } catch (Exception e) {
@@ -220,6 +241,7 @@ public class ListaService {
         }
 
         listaRepository.save(lista);
+        notificarListaNova(lista, disciplina, novos);
         System.out.println("Total de estudantes na lista após adição: " + lista.getEstudantes().size());
     }
 
@@ -244,6 +266,7 @@ public class ListaService {
     public List<ListaResponseDTO> buscarListasPorEstudante(UUID estudanteId) {
         List<Lista> listas = listaRepository.findByEstudanteId(estudanteId);
         return listas.stream()
+                .filter(l -> !l.isRascunho())
                 .map(this::convertToDTO)
                 .collect(toList());
     }
@@ -315,7 +338,7 @@ public class ListaService {
         questaoRepository.save(questao);
         listaRepository.save(lista);
 
-        return new ListaResponseDTO(lista.getId(), lista.getTitulo(), lista.getProfessor().getNome());
+        return ListaResponseDTO.de(lista);
     }
 
     public ListaCompletaResponseDTO adicionarQuestaoExistenteCompleto(UUID listaId, Integer questaoId) {
@@ -384,7 +407,7 @@ public class ListaService {
 
         listaRepository.save(lista);
 
-        return new ListaResponseDTO(lista.getId(), lista.getTitulo(), lista.getProfessor().getNome());
+        return ListaResponseDTO.de(lista);
     }
 
     @Transactional(readOnly = true)
@@ -428,7 +451,7 @@ public class ListaService {
         questaoRepository.save(questao);
         listaRepository.save(lista);
 
-        return new ListaResponseDTO(lista.getId(), lista.getTitulo(), lista.getProfessor().getNome());
+        return ListaResponseDTO.de(lista);
     }
 
     // Métodos para Listas
@@ -496,7 +519,7 @@ public class ListaService {
         lista.getEstudantes().add(estudante);
         listaRepository.save(lista);
 
-        return new ListaResponseDTO(lista.getId(), lista.getTitulo(), lista.getProfessor().getNome());
+        return ListaResponseDTO.de(lista);
     }
 
     public ListaResponseDTO removerEstudante(UUID listaId, UUID estudanteId) {
@@ -510,7 +533,7 @@ public class ListaService {
         lista.getEstudantes().remove(estudante);
         listaRepository.save(lista);
 
-        return new ListaResponseDTO(lista.getId(), lista.getTitulo(), lista.getProfessor().getNome());
+        return ListaResponseDTO.de(lista);
     }
 
     @Transactional(readOnly = true)
@@ -555,7 +578,7 @@ public class ListaService {
 
         // Usar serviço otimizado que já carrega imagens
         List<com.example.BancoDeDados.dto.QuestaoComAlternativasDTO> questoesComImagens =
-                questaoOtimizadoService.buscarQuestoesComAlternativasPorLista(listaId);
+                questaoOtimizadoService.buscarQuestoesComAlternativasPorLista(listaId, false); // visão do aluno: sem gabarito
 
         Map<String, Object> resultado = new HashMap<>();
         resultado.put("id", lista.getId());
@@ -565,6 +588,14 @@ public class ListaService {
         resultado.put("totalQuestoes", questoesComImagens.size());
 
         return resultado;
+    }
+
+    @Transactional
+    public void definirGabaritoLiberado(UUID listaId, boolean liberado) {
+        Lista lista = listaRepository.findById(listaId)
+                .orElseThrow(() -> new RuntimeException("Lista não encontrada"));
+        lista.setGabaritoLiberado(liberado);
+        listaRepository.save(lista);
     }
 
     @Transactional(readOnly = true)
@@ -592,10 +623,6 @@ public class ListaService {
 
     // Método auxiliar
     private ListaResponseDTO convertToDTO(Lista lista) {
-        return new ListaResponseDTO(
-                lista.getId(),
-                lista.getTitulo(),
-                lista.getProfessor().getNome()
-        );
+        return ListaResponseDTO.de(lista);
     }
 }

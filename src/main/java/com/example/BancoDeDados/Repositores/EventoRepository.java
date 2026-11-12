@@ -14,6 +14,9 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
     // Buscar eventos de uma disciplina por faixa de data
     List<Evento> findByDataBetweenAndDisciplina_Id(LocalDateTime inicio, LocalDateTime fim, UUID disciplinaId);
 
+    // Eventos com data dentro de uma faixa (lembrete de prazo)
+    List<Evento> findByDataBetween(LocalDateTime inicio, LocalDateTime fim);
+
     // Buscar eventos de uma disciplina pelo id
     List<Evento> findByDisciplinaId(UUID disciplinaId);
 

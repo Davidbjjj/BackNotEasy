@@ -3,6 +3,7 @@ package com.example.BancoDeDados.Controller;
 import com.example.BancoDeDados.Model.Questao;
 import com.example.BancoDeDados.ResponseDTO.QuestaoDTO;
 import com.example.BancoDeDados.ResponseDTO.QuestaoResponseDTO;
+import com.example.BancoDeDados.Security.CallerContext;
 import com.example.BancoDeDados.Services.QuestaoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -27,12 +28,16 @@ public class QuestaoController {
 
     @GetMapping("/{id}")
     public QuestaoResponseDTO buscarQuestao(@PathVariable int id) {
-        return questaoService.buscarQuestaoPorIdComGabaritoDTO(id);  // Certificando que retorna o DTO
+        QuestaoResponseDTO dto = questaoService.buscarQuestaoPorIdComGabaritoDTO(id);
+        if (dto != null && !CallerContext.isStaff()) dto.setGabarito(null); // gabarito só para staff
+        return dto;
     }
 
     @GetMapping("/questoes")
     public List<QuestaoDTO> listarQuestoes() {
-        return questaoService.listarQuestoes();
+        List<QuestaoDTO> questoes = questaoService.listarQuestoes();
+        if (!CallerContext.isStaff()) questoes.forEach(q -> q.setGabarito(null)); // gabarito só para staff
+        return questoes;
     }
 
     @DeleteMapping("/deletar/{id}")

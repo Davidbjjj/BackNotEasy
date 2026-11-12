@@ -21,11 +21,27 @@ public class RespostaEstudantes {
     @JoinColumn(name = "questao_id", nullable = false)
     private Questao questao;
 
-    @Column(nullable = false)
+    // null enquanto uma resposta aberta não foi corrigida
+    @Column
     private Boolean resposta;
 
-    @Column(nullable = false)
+    // null em questões abertas
+    @Column
     private Integer alternativa;
+
+    // FE-201: texto escrito pelo aluno (questões abertas)
+    @Column(name = "texto_resposta", columnDefinition = "TEXT")
+    private String textoResposta;
+
+    // FE-201: nota (0 a 10) e feedback do professor; corrigidaEm null = pendente
+    @Column(name = "nota_questao", precision = 4, scale = 2)
+    private java.math.BigDecimal notaQuestao;
+
+    @Column(columnDefinition = "TEXT")
+    private String feedback;
+
+    @Column(name = "corrigida_em")
+    private Instant corrigidaEm;
 
     @ManyToOne
     @JoinColumn(name = "estudante_id", nullable = false)
@@ -51,6 +67,11 @@ public class RespostaEstudantes {
     }
 
     public boolean isCorreta() {
+        if (this.questao != null && this.questao.isAberta()) {
+            // aberta: "correta" quando corrigida com nota >= 5
+            return corrigidaEm != null && notaQuestao != null
+                    && notaQuestao.compareTo(new java.math.BigDecimal("5")) >= 0;
+        }
 
         if (this.questao == null || this.alternativa == null || this.questao.getGabarito() == null) {
             return false;

@@ -44,4 +44,17 @@ public class ListaEstudanteNota {
 
     @Column(name = "finalizada", nullable = false, columnDefinition = "boolean default false")
     private boolean finalizada = false;
+
+    // FE-205: tentativas concluídas e melhor nota (usada quando a regra é "MAIOR")
+    @Column(name = "tentativas")
+    private Integer tentativas = 0;
+
+    @Column(name = "melhor_nota", precision = 4, scale = 2)
+    private BigDecimal melhorNota;
+
+    @Column(name = "iniciada_em")
+    private java.time.Instant iniciadaEm;
+
+    @Column(name = "finalizada_em")
+    private java.time.Instant finalizadaEm;
 }

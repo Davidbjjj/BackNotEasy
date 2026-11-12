@@ -111,4 +111,20 @@ public interface RespostaEstudantesRepository extends JpaRepository<RespostaEstu
     @Query("SELECT COUNT(re) FROM RespostaEstudantes re " +
             "WHERE re.questao.lista.id = :listaId AND re.estudante.id = :estudanteId")
     long countByListaIdAndEstudanteId(@Param("listaId") UUID listaId, @Param("estudanteId") UUID estudanteId);
+
+    // FE-201: respostas abertas enviadas e ainda não corrigidas (filtro por professor é feito no serviço)
+    @Query("SELECT re FROM RespostaEstudantes re JOIN FETCH re.questao q JOIN FETCH re.estudante e " +
+            "JOIN FETCH q.lista l LEFT JOIN FETCH l.disciplina d " +
+            "WHERE q.tipo = 'ABERTA' AND re.corrigidaEm IS NULL AND re.textoResposta IS NOT NULL")
+    List<RespostaEstudantes> findPendentesCorrecao();
+
+    // FE-207: respostas do aluno com questão/lista/disciplina (desempenho por assunto)
+    @Query("SELECT re FROM RespostaEstudantes re JOIN FETCH re.questao q JOIN FETCH q.lista l " +
+            "WHERE re.estudante.id = :estudanteId")
+    List<RespostaEstudantes> findDetalhadasByEstudanteId(@Param("estudanteId") UUID estudanteId);
+
+    // FE-203: respostas de todas as listas de uma disciplina (assuntos mais fracos)
+    @Query("SELECT re FROM RespostaEstudantes re JOIN FETCH re.questao q JOIN q.lista l " +
+            "WHERE l.disciplina.id = :disciplinaId")
+    List<RespostaEstudantes> findDetalhadasByDisciplinaId(@Param("disciplinaId") UUID disciplinaId);
 }

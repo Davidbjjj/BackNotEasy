@@ -36,6 +36,10 @@ public class DatabaseMigrationRunner implements ApplicationRunner {
         // Gabarito é opcional (questões importadas pelo modelo podem não ter)
         apply("ALTER TABLE IF EXISTS questao ALTER COLUMN gabarito DROP NOT NULL");
 
+        // FE-201: respostas abertas não têm alternativa nem correção imediata
+        apply("ALTER TABLE IF EXISTS resposta_estudantes ALTER COLUMN alternativa DROP NOT NULL");
+        apply("ALTER TABLE IF EXISTS resposta_estudantes ALTER COLUMN resposta DROP NOT NULL");
+
         // Índices básicos
         apply("CREATE INDEX IF NOT EXISTS idx_questao_lista_id ON questao (lista_id)");
         apply("CREATE INDEX IF NOT EXISTS idx_questao_gabarito ON questao (gabarito)");

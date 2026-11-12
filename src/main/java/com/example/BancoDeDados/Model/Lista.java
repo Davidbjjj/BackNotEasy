@@ -43,6 +43,42 @@ public class Lista {
     @JoinColumn(name = "disciplina_id")
     private Disciplina disciplina;
 
+    // Regra de liberação do gabarito: o professor libera; alunos só veem a revisão
+    // (gabarito/explicação) se a lista estiver liberada E eles tiverem finalizado.
+    @Column(name = "gabarito_liberado", nullable = false, columnDefinition = "boolean default false")
+    private boolean gabaritoLiberado = false;
+
+    // FE-205: janela de resposta, tentativas e regras. Null = sem restrição.
+    @Column(name = "abre_em")
+    private java.time.Instant abreEm;
+
+    @Column(name = "fecha_em")
+    private java.time.Instant fechaEm;
+
+    @Column(name = "max_tentativas")
+    private Integer maxTentativas;
+
+    // "MAIOR" (padrão) ou "ULTIMA"
+    @Column(name = "regra_nota", length = 10)
+    private String regraNota;
+
+    @Column(name = "tempo_limite_minutos")
+    private Integer tempoLimiteMinutos;
+
+    @Column(name = "embaralhar_questoes", nullable = false, columnDefinition = "boolean default false")
+    private boolean embaralharQuestoes = false;
+
+    @Column(name = "embaralhar_alternativas", nullable = false, columnDefinition = "boolean default false")
+    private boolean embaralharAlternativas = false;
+
+    // FE-206: "RASCUNHO" (invisível ao aluno) ou "PUBLICADA". Null (listas antigas) = publicada.
+    @Column(length = 12)
+    private String status;
+
+    public boolean isRascunho() {
+        return "RASCUNHO".equals(status);
+    }
+
     @ManyToMany
     @JoinTable(
             name = "lista_estudantes",

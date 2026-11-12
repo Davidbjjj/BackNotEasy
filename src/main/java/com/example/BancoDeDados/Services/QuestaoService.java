@@ -23,6 +23,73 @@ public class QuestaoService {
     @Autowired
     private ListaRepository listaRepository;
 
+    public Questao criarQuestao(String cabecalho, String enunciado, List<String> alternativas, Integer gabarito,
+                                String assunto, String explicacao) {
+        Questao q = criarQuestao(cabecalho, enunciado, alternativas, gabarito);
+        if (assunto == null && explicacao == null) return q;
+        q.setAssunto(assunto);
+        q.setExplicacao(explicacao);
+        return questaoRepositores.save(q);
+    }
+
+    /**
+     * Cria questão objetiva ou aberta já dentro da lista (toda questão pertence a uma lista), com a
+     * classificação do banco de questões (FE-201/202).
+     */
+    @org.springframework.transaction.annotation.Transactional
+    public Questao criarQuestao(QuestaoRequestDTO req, Lista lista) {
+        if (req.getEnunciado() == null || req.getEnunciado().isBlank()) {
+            throw new IllegalArgumentException("Informe o enunciado da questão.");
+        }
+        boolean aberta = "ABERTA".equalsIgnoreCase(req.getTipo());
+        Questao q = Questao.builder().cabecalho(req.getCabecalho()).enunciado(req.getEnunciado()).lista(lista).build();
+        if (aberta) {
+            q.setTipo("ABERTA");
+        } else {
+            List<String> alternativas = req.getAlternativas();
+            if (alternativas == null || alternativas.size() < 2) {
+                throw new IllegalArgumentException("Informe ao menos duas alternativas.");
+            }
+            if (req.getGabarito() == null || req.getGabarito() < 0 || req.getGabarito() >= alternativas.size()) {
+                throw new IllegalArgumentException("Índice do gabarito inválido.");
+            }
+            q.setGabarito(req.getGabarito());
+            q.setAlternativasTexto(alternativas);
+        }
+        q.setAssunto(req.getAssunto());
+        q.setExplicacao(req.getExplicacao());
+        aplicarClassificacao(q, req);
+        return questaoRepositores.save(q);
+    }
+
+    /** Tipo, rubrica, dificuldade e tags; campos nulos no pedido não apagam o que já existe. */
+    private void aplicarClassificacao(Questao q, QuestaoRequestDTO req) {
+        if (req.getTipo() != null) q.setTipo("ABERTA".equalsIgnoreCase(req.getTipo()) ? "ABERTA" : "OBJETIVA");
+        if (req.getRubrica() != null) q.setRubrica(req.getRubrica());
+        if (req.getDificuldade() != null) q.setDificuldade(normalizarDificuldade(req.getDificuldade()));
+        if (req.getTags() != null) q.setTags(normalizarTags(req.getTags()));
+    }
+
+    public static String normalizarDificuldade(String d) {
+        if (d == null || d.isBlank()) return null;
+        String v = d.trim().toUpperCase().replace("É", "E");
+        if (!List.of("FACIL", "MEDIA", "DIFICIL").contains(v)) {
+            throw new IllegalArgumentException("Dificuldade inválida: use FACIL, MEDIA ou DIFICIL.");
+        }
+        return v;
+    }
+
+    public static java.util.Set<String> normalizarTags(java.util.Collection<String> tags) {
+        java.util.Set<String> out = new java.util.LinkedHashSet<>();
+        for (String t : tags) {
+            if (t == null) continue;
+            String v = t.trim().toLowerCase();
+            if (!v.isEmpty()) out.add(v.length() > 60 ? v.substring(0, 60) : v);
+        }
+        if (out.size() > 20) throw new IllegalArgumentException("No máximo 20 tags por questão.");
+        return out;
+    }
+
     public Questao criarQuestao(String cabecalho, String enunciado, List<String> alternativas, Integer gabarito) {
         if (alternativas == null || alternativas.isEmpty()) {
             throw new IllegalArgumentException("A lista de alternativas não pode ser vazia.");
@@ -86,9 +153,18 @@ public class QuestaoService {
         }
         questao.setCabecalho(req.getCabecalho());
         questao.setEnunciado(req.getEnunciado());
-        // ✅ Usa helper para atualizar alternativas
-        questao.setAlternativasTexto(req.getAlternativas());
-        questao.setGabarito(req.getGabarito());
+        if (req.getTipo() != null) questao.setTipo("ABERTA".equalsIgnoreCase(req.getTipo()) ? "ABERTA" : "OBJETIVA");
+        if (!questao.isAberta()) {
+            // ✅ Usa helper para atualizar alternativas
+            questao.setAlternativasTexto(req.getAlternativas());
+            questao.setGabarito(req.getGabarito());
+        }
+        if (req.getRubrica() != null) questao.setRubrica(req.getRubrica());
+        if (req.getDificuldade() != null) questao.setDificuldade(normalizarDificuldade(req.getDificuldade()));
+        if (req.getTags() != null) questao.setTags(normalizarTags(req.getTags()));
+        // Só altera se enviados, para clientes antigos não apagarem esses campos
+        if (req.getAssunto() != null) questao.setAssunto(req.getAssunto());
+        if (req.getExplicacao() != null) questao.setExplicacao(req.getExplicacao());
         var salva = questaoRepositores.save(questao);
         return new QuestaoResponseDTO(salva.getId(), salva.getCabecalho(), salva.getEnunciado(), salva.getAlternativasTexto(), salva.getGabarito());
     }

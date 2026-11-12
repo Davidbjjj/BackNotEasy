@@ -16,6 +16,14 @@ public class QuestaoComAlternativasDTO {
     private String cabecalho;
     private String enunciado;
     private Integer gabarito;
+    private String assunto;
+    private String explicacao;
+    /** "OBJETIVA" ou "ABERTA". */
+    private String tipo;
+    /** Só para professor/instituição. */
+    private String rubrica;
+    private String dificuldade;
+    private List<String> tags;
     private List<AlternativaDTO> alternativas;
     private List<ImagemDTO> imagens; // Adiciona lista de imagens
 

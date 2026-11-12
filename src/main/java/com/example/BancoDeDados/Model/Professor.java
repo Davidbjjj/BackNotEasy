@@ -54,6 +54,10 @@ public class Professor implements UserDetails {
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     private Date dataNascimento;
 
+    /** FE-306: "COORDENADOR" ou nulo/"PROFESSOR". O token continua com role PROFESSOR; a matriz decide o acesso. */
+    @Column(name = "papel_instituicao", length = 15)
+    private String papelInstituicao;
+
     // Construtor que recebe DTO e Instituicao
     public Professor(ProfessorResponseDTO professorDTO, Instituicao instituicao) {
         this.nome = professorDTO.nome();

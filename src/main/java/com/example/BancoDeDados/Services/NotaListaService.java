@@ -32,6 +32,9 @@ public class NotaListaService {
     @Autowired
     private EstudanteRepositores estudanteRepository;
 
+    @Autowired
+    private QuestaoOtimizadoService questaoOtimizadoService;
+
     /**
      * Calcula e salva a nota do estudante em uma lista
      */
@@ -52,10 +55,14 @@ public class NotaListaService {
                 .filter(RespostaEstudantes::isCorreta)
                 .count();
 
+        // Cada questão vale 1/total. Objetiva: 0 ou 1. Aberta: nota da correção / 10 (pendente = 0).
+        BigDecimal pontos = respostas.stream()
+                .map(NotaListaService::pontosDaQuestao)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         // Calcula porcentagem de acertos
         BigDecimal porcentagemAcertos = totalQuestoes > 0 ?
-                BigDecimal.valueOf(questoesCorretas)
-                        .divide(BigDecimal.valueOf(totalQuestoes), 4, RoundingMode.HALF_UP)
+                pontos.divide(BigDecimal.valueOf(totalQuestoes), 4, RoundingMode.HALF_UP)
                         .multiply(BigDecimal.valueOf(100)) :
                 BigDecimal.ZERO;
 
@@ -66,6 +73,17 @@ public class NotaListaService {
         ListaEstudanteNota listaEstudanteNota = listaEstudanteNotaRepository
                 .findByListaIdAndEstudanteId(listaId, estudanteId)
                 .orElse(new ListaEstudanteNota());
+
+        // FE-205: regra "maior nota" mantém a melhor tentativa já concluída
+        if (!"ULTIMA".equals(lista.getRegraNota()) && listaEstudanteNota.getMelhorNota() != null
+                && nota.compareTo(listaEstudanteNota.getMelhorNota()) < 0) {
+            nota = listaEstudanteNota.getMelhorNota();
+            porcentagemAcertos = nota.multiply(BigDecimal.TEN);
+        }
+        if (listaEstudanteNota.isFinalizada()
+                && (listaEstudanteNota.getMelhorNota() == null || nota.compareTo(listaEstudanteNota.getMelhorNota()) > 0)) {
+            listaEstudanteNota.setMelhorNota(nota);
+        }
 
         listaEstudanteNota.setLista(lista);
         listaEstudanteNota.setEstudante(estudante);
@@ -81,6 +99,85 @@ public class NotaListaService {
         }
         return listaEstudanteNotaRepository.save(listaEstudanteNota);
     }
+    static BigDecimal pontosDaQuestao(RespostaEstudantes r) {
+        if (r.getQuestao() != null && r.getQuestao().isAberta()) {
+            if (r.getCorrigidaEm() == null || r.getNotaQuestao() == null) return BigDecimal.ZERO;
+            return r.getNotaQuestao().divide(BigDecimal.TEN, 4, RoundingMode.HALF_UP);
+        }
+        return r.isCorreta() ? BigDecimal.ONE : BigDecimal.ZERO;
+    }
+
+    /** Respostas abertas do aluno nesta lista que ainda esperam correção. */
+    @Transactional(readOnly = true)
+    public long contarPendentesCorrecao(UUID listaId, UUID estudanteId) {
+        return respostaEstudantesRepository.findByEstudanteIdAndQuestaoListaId(estudanteId, listaId).stream()
+                .filter(r -> r.getQuestao().isAberta() && r.getCorrigidaEm() == null)
+                .count();
+    }
+
+    /**
+     * FE-205/206: bloqueia respostas fora da janela, em rascunho, após o tempo limite ou com a lista já
+     * finalizada. Marca o início da tentativa na primeira resposta (base do tempo limite).
+     */
+    public void validarRespostaPermitida(UUID listaId, UUID estudanteId) {
+        Lista lista = listaRepository.findById(listaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Lista não encontrada"));
+        java.time.Instant agora = java.time.Instant.now();
+        if (lista.getDisciplina() != null) lista.getDisciplina().exigirAtiva();
+        if (lista.isRascunho()) {
+            throw new IllegalArgumentException("Esta lista ainda não foi publicada.");
+        }
+        if (lista.getAbreEm() != null && agora.isBefore(lista.getAbreEm())) {
+            throw new IllegalArgumentException("Esta lista ainda não está aberta.");
+        }
+        if (lista.getFechaEm() != null && agora.isAfter(lista.getFechaEm())) {
+            throw new IllegalArgumentException("O prazo desta lista já encerrou.");
+        }
+        ListaEstudanteNota nota = buscarNotaEstudante(listaId, estudanteId);
+        if (nota.isFinalizada()) {
+            throw new IllegalArgumentException("Você já finalizou esta lista.");
+        }
+        if (nota.getIniciadaEm() == null) {
+            nota.setIniciadaEm(agora);
+            listaEstudanteNotaRepository.save(nota);
+        } else if (lista.getTempoLimiteMinutos() != null
+                && agora.isAfter(nota.getIniciadaEm().plusSeconds(lista.getTempoLimiteMinutos() * 60L + 30))) {
+            throw new IllegalArgumentException("O tempo limite desta lista acabou.");
+        }
+    }
+
+    /** Tentativas permitidas: null = 1 (comportamento anterior). */
+    public static int maxTentativas(Lista lista) {
+        return lista.getMaxTentativas() == null ? 1 : Math.max(1, lista.getMaxTentativas());
+    }
+
+    /** FE-205: apaga as respostas e reabre a lista para o aluno, se ainda houver tentativas e prazo. */
+    public ListaEstudanteNota iniciarNovaTentativa(UUID listaId, UUID estudanteId) {
+        Lista lista = listaRepository.findById(listaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Lista não encontrada"));
+        ListaEstudanteNota nota = buscarNotaEstudante(listaId, estudanteId);
+        if (!nota.isFinalizada()) {
+            throw new IllegalArgumentException("Finalize a tentativa atual antes de iniciar outra.");
+        }
+        int feitas = nota.getTentativas() == null || nota.getTentativas() == 0 ? 1 : nota.getTentativas();
+        if (feitas >= maxTentativas(lista)) {
+            throw new IllegalArgumentException("Você usou todas as tentativas desta lista.");
+        }
+        java.time.Instant agora = java.time.Instant.now();
+        if (lista.getFechaEm() != null && agora.isAfter(lista.getFechaEm())) {
+            throw new IllegalArgumentException("O prazo desta lista já encerrou.");
+        }
+        respostaEstudantesRepository.deleteAll(
+                respostaEstudantesRepository.findByEstudanteIdAndQuestaoListaId(estudanteId, listaId));
+        respostaEstudantesRepository.flush();
+        nota.setFinalizada(false);
+        nota.setIniciadaEm(null);
+        nota.setFinalizadaEm(null);
+        nota.setQuestoesRespondidas(0);
+        nota.setQuestoesCorretas(0);
+        return listaEstudanteNotaRepository.save(nota);
+    }
+
     public Optional<ListaEstudanteNota> buscarNotaEstudanteOptional(UUID listaId, UUID estudanteId) {
         try {
             ListaEstudanteNota nota = buscarNotaEstudante(listaId, estudanteId);
@@ -395,6 +492,68 @@ public class NotaListaService {
      }
 
     /**
+     * Revisão com gabarito. 403 se o aluno não finalizou a lista ou se o gabarito não foi liberado.
+     */
+    @Transactional(readOnly = true)
+    public RevisaoListaDTO buscarRevisao(UUID listaId, UUID estudanteId) {
+        Lista lista = listaRepository.findById(listaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Lista não encontrada com id: " + listaId));
+
+        // Não usa buscarNotaEstudante: ele criaria um registro de nota como efeito colateral de um GET
+        ListaEstudanteNota nota = listaEstudanteNotaRepository.findByListaIdAndEstudanteId(listaId, estudanteId)
+                .orElse(null);
+        if (nota == null || !nota.isFinalizada()) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "Finalize a lista para ver a revisão");
+        }
+        if (!lista.isGabaritoLiberado()) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "Gabarito ainda não liberado pelo professor");
+        }
+
+        Map<Integer, RespostaEstudantes> respostaPorQuestao = respostaEstudantesRepository
+                .findByEstudanteIdAndQuestaoListaId(estudanteId, listaId).stream()
+                .collect(Collectors.toMap(r -> r.getQuestao().getId(), r -> r, (a, b) -> b));
+
+        List<RevisaoListaDTO.ItemRevisaoDTO> itens = questaoOtimizadoService
+                .buscarQuestoesComAlternativasPorLista(listaId, true).stream()
+                .map(q -> {
+                    RespostaEstudantes resp = respostaPorQuestao.get(q.getId());
+                    Integer marcada = resp == null ? null : resp.getAlternativa();
+                    boolean aberta = "ABERTA".equals(q.getTipo());
+                    return RevisaoListaDTO.ItemRevisaoDTO.builder()
+                            .questaoId(q.getId())
+                            .tipo(aberta ? "ABERTA" : "OBJETIVA")
+                            .textoResposta(resp == null ? null : resp.getTextoResposta())
+                            .notaQuestao(resp == null ? null : resp.getNotaQuestao())
+                            .feedback(resp == null ? null : resp.getFeedback())
+                            .corrigida(aberta ? resp != null && resp.getCorrigidaEm() != null : null)
+                            .assunto(q.getAssunto())
+                            .cabecalho(q.getCabecalho())
+                            .enunciado(q.getEnunciado())
+                            .alternativas(q.getAlternativas())
+                            .imagens(q.getImagens())
+                            .respostaAluno(marcada)
+                            .gabarito(q.getGabarito())
+                            .correta(aberta ? (resp != null && resp.getCorrigidaEm() != null ? resp.isCorreta() : null)
+                                    : (q.getGabarito() == null ? null : q.getGabarito().equals(marcada)))
+                            .explicacao(q.getExplicacao())
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        return RevisaoListaDTO.builder()
+                .listaId(lista.getId())
+                .titulo(lista.getTitulo())
+                .nota(nota.getNota())
+                .porcentagemAcertos(nota.getPorcentagemAcertos())
+                .totalQuestoes(nota.getTotalQuestoes())
+                .questoesCorretas(nota.getQuestoesCorretas())
+                .questoes(itens)
+                .build();
+    }
+
+    /**
      * Verifica se o estudante já respondeu pelo menos uma questão da lista
      */
     public boolean alunoRespondeuLista(UUID listaId, UUID estudanteId) {
@@ -411,10 +570,28 @@ public class NotaListaService {
         if (nota.getQuestoesRespondidas() == null || nota.getTotalQuestoes() == null) {
             throw new RuntimeException("Dados de questões incompletos para finalizar");
         }
-        if (nota.getQuestoesRespondidas() < nota.getTotalQuestoes()) {
+        // FE-205: com tempo limite, ao esgotar o tempo a lista pode ser entregue mesmo incompleta
+        boolean tempoEsgotado = lista.getTempoLimiteMinutos() != null && nota.getIniciadaEm() != null
+                && java.time.Instant.now().isAfter(nota.getIniciadaEm().plusSeconds(lista.getTempoLimiteMinutos() * 60L));
+        if (nota.getQuestoesRespondidas() < nota.getTotalQuestoes() && !tempoEsgotado) {
             throw new RuntimeException("Ainda existem questões não respondidas. Responda todas para finalizar.");
         }
-        nota.setFinalizada(true);
+        java.time.Instant agora = java.time.Instant.now();
+        if (lista.isRascunho()) {
+            throw new RuntimeException("Esta lista ainda não foi publicada.");
+        }
+        if (lista.getFechaEm() != null && agora.isAfter(lista.getFechaEm()) && !nota.isFinalizada()) {
+            throw new RuntimeException("O prazo desta lista já encerrou.");
+        }
+        if (!nota.isFinalizada()) {
+            nota.setFinalizada(true);
+            nota.setFinalizadaEm(agora);
+            nota.setTentativas((nota.getTentativas() == null ? 0 : nota.getTentativas()) + 1);
+        }
+        if (nota.getMelhorNota() == null
+                || (nota.getNota() != null && nota.getNota().compareTo(nota.getMelhorNota()) > 0)) {
+            nota.setMelhorNota(nota.getNota());
+        }
         return listaEstudanteNotaRepository.save(nota);
     }
 }

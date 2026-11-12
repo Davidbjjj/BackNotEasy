@@ -30,6 +30,10 @@ public class EventoService {
     private EventoMapper eventoMapper;
     @Autowired
     private NotaListaService notaListaService;
+    @Autowired
+    private NotificacaoService notificacaoService;
+    @Autowired
+    private AuditoriaService auditoria;
 
     public EventoService(EventoRepository eventoRepository,
                          DisciplinaRepository disciplinaRepository,
@@ -197,10 +201,19 @@ public class EventoService {
         NotaEvento notaEvento = notaEventoRepository.findByEstudanteAndEvento(estudante, evento)
                 .orElseThrow(() -> new ResourceNotFoundException("Relação estudante-evento não encontrada"));
 
+        Object notaAnterior = notaEvento.getNota();
         notaEvento.setNota(request.getNota());
         notaEvento.setObservacao(request.getObservacao());
 
         NotaEvento salvo = notaEventoRepository.save(notaEvento);
+        if (evento.getDisciplina() != null && evento.getDisciplina().getInstituicao() != null) {
+            auditoria.registrar(evento.getDisciplina().getInstituicao().getId(),
+                    notaAnterior == null ? "NOTA_LANCADA" : "NOTA_ALTERADA", "NotaEvento", salvo.getId(),
+                    estudante.getNome() + " em \"" + evento.getTitulo() + "\"",
+                    notaAnterior == null ? "sem nota" : String.valueOf(notaAnterior), String.valueOf(request.getNota()));
+        }
+        notificacaoService.criar(estudanteId, TipoNotificacao.NOTA_LANCADA, "Nota lançada",
+                evento.getTitulo() + ": sua nota foi lançada.", "/atividades/" + eventoId);
         return convertToResponse(salvo);
     }
 

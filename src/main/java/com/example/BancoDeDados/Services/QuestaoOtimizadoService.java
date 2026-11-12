@@ -26,6 +26,14 @@ public class QuestaoOtimizadoService {
      */
     @Transactional(readOnly = true)
     public List<QuestaoComAlternativasDTO> buscarQuestoesComAlternativasPorLista(UUID listaId) {
+        return buscarQuestoesComAlternativasPorLista(listaId, true);
+    }
+
+    /**
+     * @param incluirGabarito false para visões de aluno: gabarito/assunto/explicação saem null
+     */
+    @Transactional(readOnly = true)
+    public List<QuestaoComAlternativasDTO> buscarQuestoesComAlternativasPorLista(UUID listaId, boolean incluirGabarito) {
         // 1️⃣ Buscar questões (1 query)
         List<Questao> questoes = questaoRepositores.findByListaId(listaId);
 
@@ -52,7 +60,13 @@ public class QuestaoOtimizadoService {
                 .id(q.getId())
                 .cabecalho(q.getCabecalho())
                 .enunciado(q.getEnunciado())
-                .gabarito(q.getGabarito())
+                .gabarito(incluirGabarito ? q.getGabarito() : null)
+                .assunto(incluirGabarito ? q.getAssunto() : null)
+                .explicacao(incluirGabarito ? q.getExplicacao() : null)
+                .tipo(q.isAberta() ? "ABERTA" : "OBJETIVA")
+                .rubrica(incluirGabarito ? q.getRubrica() : null)
+                .dificuldade(incluirGabarito ? q.getDificuldade() : null)
+                .tags(incluirGabarito ? new java.util.ArrayList<>(q.getTags()) : null)
                 .alternativas(
                     alternativasPorQuestao.getOrDefault(q.getId(), Collections.emptyList())
                         .stream()
@@ -66,6 +80,28 @@ public class QuestaoOtimizadoService {
                 .imagens(converterImagensParaDTO(q.getImagens()))
                 .build())
             .collect(Collectors.toList());
+    }
+
+    /**
+     * FE-205: embaralha questões e/ou alternativas para o aluno. A ordem é estável por aluno+lista
+     * (mesma semente), e cada alternativa mantém a sua {@code ordem} original, que é o que o gabarito usa.
+     */
+    public List<QuestaoComAlternativasDTO> embaralharParaAluno(UUID listaId, UUID estudanteId,
+                                                              List<QuestaoComAlternativasDTO> questoes,
+                                                              boolean questoesFlag, boolean alternativasFlag) {
+        if (estudanteId == null || (!questoesFlag && !alternativasFlag)) return questoes;
+        long seed = listaId.hashCode() * 31L + estudanteId.hashCode();
+        List<QuestaoComAlternativasDTO> saida = new ArrayList<>(questoes);
+        if (questoesFlag) Collections.shuffle(saida, new Random(seed));
+        if (alternativasFlag) {
+            for (QuestaoComAlternativasDTO q : saida) {
+                if (q.getAlternativas() == null || q.getAlternativas().size() < 2) continue;
+                List<QuestaoComAlternativasDTO.AlternativaDTO> alts = new ArrayList<>(q.getAlternativas());
+                Collections.shuffle(alts, new Random(seed + q.getId()));
+                q.setAlternativas(alts);
+            }
+        }
+        return saida;
     }
 
     /**

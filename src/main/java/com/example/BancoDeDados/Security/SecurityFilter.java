@@ -22,6 +22,9 @@ public class SecurityFilter extends OncePerRequestFilter {
     @Autowired
     private TokenService tokenService;
 
+    @Autowired
+    private com.example.BancoDeDados.Services.AcessoService acessoService;
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
@@ -51,6 +54,23 @@ public class SecurityFilter extends OncePerRequestFilter {
 
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+
+                String userId = tokenService.extrairClaim(token, "userId");
+                if (userId != null) {
+                    try {
+                        java.util.UUID uid = java.util.UUID.fromString(userId);
+                        request.setAttribute(CallerContext.USER_ID_ATTR, uid);
+                        if ("ALUNO".equals(role)) {
+                            try {
+                                acessoService.registrar(uid); // FE-204/207: último acesso do aluno
+                            } catch (RuntimeException ignored) {
+                                // falha ao registrar acesso nunca deve derrubar a requisição
+                            }
+                        }
+                    } catch (IllegalArgumentException ignored) {
+                        // claim malformada: segue sem userId
+                    }
+                }
             }
         }
         filterChain.doFilter(request, response);

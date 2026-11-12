@@ -74,8 +74,13 @@ public class ListaController {
     // No ListaController.java - Método corrigido
     @GetMapping("/estudante/{estudanteId}/questoes")
     public ResponseEntity<List<QuestaoResponseDTO>> buscarQuestoesPorEstudante(@PathVariable UUID estudanteId) {
+        // Fora do try: 401/403 não pode virar 400. Aluno só vê as próprias questões.
+        com.example.BancoDeDados.Security.CallerContext.exigirEstudanteOuStaff(estudanteId);
         try {
             List<QuestaoResponseDTO> questoes = listaService.buscarQuestoesPorEstudante(estudanteId);
+            if (!chamadorEhStaff()) {
+                questoes.forEach(q -> q.setGabarito(null)); // aluno nunca recebe gabarito aqui
+            }
             return ResponseEntity.ok(questoes);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(null);
@@ -105,15 +110,15 @@ public class ListaController {
 
         System.out.println("Ver se a questão que está vindo daqui vem vazia: " + questaoRequest.getEnunciado());
 
-        Questao novaQuestao = questaoService.criarQuestao(
-                questaoRequest.getCabecalho(),
-                questaoRequest.getEnunciado(),
-                questaoRequest.getAlternativas(),
-                questaoRequest.getGabarito()
-        );
-
-        ListaResponseDTO listaResponseDTO = listaService.adicionarQuestao(listaId, novaQuestao.getId());
-        return listaResponseDTO;
+        if (!chamadorEhStaff()) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "Apenas professor/instituição");
+        }
+        Lista lista = listaRepository.findById(listaId)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Lista não encontrada"));
+        questaoService.criarQuestao(questaoRequest, lista);
+        return ListaResponseDTO.de(lista);
     }
     @PostMapping("/{listaId}/questoes/{questaoId}")
     public ListaResponseDTO adicionarQuestaoExistente(@PathVariable UUID listaId, @PathVariable Integer questaoId) {
@@ -126,7 +131,7 @@ public class ListaController {
 
         // Usar serviço otimizado que já retorna questões COM imagens
         List<com.example.BancoDeDados.dto.QuestaoComAlternativasDTO> questoesDTO =
-            questaoOtimizadoService.buscarQuestoesComAlternativasPorLista(listaId);
+            questaoOtimizadoService.buscarQuestoesComAlternativasPorLista(listaId, chamadorEhStaff());
 
         System.out.println("DEBUG - Total de questões retornadas: " + questoesDTO.size());
         questoesDTO.forEach(q -> {
@@ -135,8 +140,33 @@ public class ListaController {
         });
 
 
-        System.out.println("DEBUG - Total de DTOs criados: " + questoesDTO.size());
+        // FE-205: embaralhar questões/alternativas só para o aluno, de forma estável por aluno e lista
+        if (!chamadorEhStaff() && com.example.BancoDeDados.Security.CallerContext.userId() != null) {
+            Lista lista = listaRepository.findById(listaId).orElse(null);
+            if (lista != null) {
+                questoesDTO = questaoOtimizadoService.embaralharParaAluno(listaId,
+                        com.example.BancoDeDados.Security.CallerContext.userId(), questoesDTO,
+                        lista.isEmbaralharQuestoes(), lista.isEmbaralharAlternativas());
+            }
+        }
         return questoesDTO;
+    }
+
+    /** Gabarito só para PROFESSOR/INSTITUICAO/ADMIN autenticados; anônimo ou aluno não recebe. */
+    private boolean chamadorEhStaff() {
+        return com.example.BancoDeDados.Security.CallerContext.isStaff();
+    }
+
+    /** Professor libera/bloqueia o gabarito da lista para revisão dos alunos. */
+    @PutMapping("/{listaId}/gabarito-liberado")
+    public ResponseEntity<?> liberarGabarito(@PathVariable UUID listaId,
+                                             @RequestBody java.util.Map<String, Boolean> body) {
+        if (!chamadorEhStaff()) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).body("Apenas professor/instituição");
+        }
+        boolean liberado = Boolean.TRUE.equals(body.get("liberado"));
+        listaService.definirGabaritoLiberado(listaId, liberado);
+        return ResponseEntity.ok(java.util.Map.of("listaId", listaId, "gabaritoLiberado", liberado));
     }
 
     @GetMapping("/professor/{professorId}")
