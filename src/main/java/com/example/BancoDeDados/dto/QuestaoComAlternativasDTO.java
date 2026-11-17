@@ -35,6 +35,8 @@ public class QuestaoComAlternativasDTO {
         private Long id;
         private Integer ordem;
         private String texto;
+        /** Quando a alternativa é uma figura (ex.: um dos cinco gráficos): a imagem dela. Nulo nas demais. */
+        private ImagemDTO imagem;
     }
 
     @Data
@@ -50,6 +52,7 @@ public class QuestaoComAlternativasDTO {
         private String textoOcr;
         private Boolean exibirNoEnunciado;       // true se deve exibir junto ao enunciado
         private Boolean exibirNasAlternativas;   // true se deve exibir junto às alternativas
+        private Integer alternativaIndice;       // 0=A..4=E quando a imagem É a alternativa; nulo nas demais
     }
 }
 

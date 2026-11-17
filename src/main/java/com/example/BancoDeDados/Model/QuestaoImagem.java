@@ -51,6 +51,13 @@ public class QuestaoImagem {
     @Column(name = "exibir_nas_alternativas")
     private Boolean exibirNasAlternativas = false; // padrão: não mostrar nas alternativas
 
+    /**
+     * Quando a alternativa é uma figura (ex.: cinco gráficos): índice da alternativa a que esta imagem
+     * pertence (0 = A ... 4 = E). Nulo nas imagens comuns do enunciado.
+     */
+    @Column(name = "alternativa_indice")
+    private Integer alternativaIndice;
+
     // NOVOS CAMPOS PARA CACHE / CONDICIONAL
     @Column(name = "etag", length = 64)
     private String etag;

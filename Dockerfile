@@ -33,7 +33,7 @@ RUN apk add --no-cache tzdata && \
 # Copia jar
 COPY --from=builder /app/target/BancoDeDados-0.0.1-SNAPSHOT.jar app.jar
 
-ENV JAVA_OPTS="-Xmx512m -Xms256m -Dfile.encoding=UTF-8 -Duser.timezone=America/Sao_Paulo"
+ENV JAVA_OPTS="-Xmx1536m -Xms256m -Dfile.encoding=UTF-8 -Duser.timezone=America/Sao_Paulo"
 
 EXPOSE 8080
 

@@ -50,6 +50,7 @@ public class QuestaoCloneService {
                     .textoOcr(img.getTextoOcr())
                     .exibirNoEnunciado(img.getExibirNoEnunciado())
                     .exibirNasAlternativas(img.getExibirNasAlternativas())
+                    .alternativaIndice(img.getAlternativaIndice())
                     .etag(img.getEtag())
                     .build());
         }

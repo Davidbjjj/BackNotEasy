@@ -59,9 +59,16 @@ public class BancoQuestoesService {
     private Item paraItem(Questao q, boolean comImagens) {
         Lista l = q.getLista();
         Disciplina d = l.getDisciplina();
+        // todas as imagens: as do enunciado e as que são alternativas (estas com alternativaIndice preenchido)
         List<QuestaoComAlternativasDTO.ImagemDTO> imagens = comImagens
                 ? questaoOtimizadoService.buscarQuestaoComAlternativasPorId(q.getId())
-                        .map(QuestaoComAlternativasDTO::getImagens).orElse(List.of())
+                        .map(dto -> {
+                            List<QuestaoComAlternativasDTO.ImagemDTO> todas = new ArrayList<>(dto.getImagens());
+                            for (QuestaoComAlternativasDTO.AlternativaDTO a : dto.getAlternativas()) {
+                                if (a.getImagem() != null) todas.add(a.getImagem());
+                            }
+                            return todas;
+                        }).orElse(List.of())
                 : List.of();
         return new Item(q.getId(), q.isAberta() ? "ABERTA" : "OBJETIVA", q.getCabecalho(), q.getEnunciado(),
                 q.getAlternativasTexto(), q.getGabarito(), q.getAssunto(), q.getExplicacao(), q.getRubrica(),

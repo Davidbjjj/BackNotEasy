@@ -34,10 +34,10 @@ public class ModeloQuestoesService {
 
     private final RestTemplate restTemplate;
 
-    public ModeloQuestoesService() {
+    public ModeloQuestoesService(@Value("${modelo.read-timeout-segundos:900}") int readTimeoutSegundos) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(5_000);
-        factory.setReadTimeout(180_000);
+        factory.setReadTimeout(readTimeoutSegundos * 1000);
         this.restTemplate = new RestTemplate(factory);
     }
 
@@ -53,8 +53,9 @@ public class ModeloQuestoesService {
         Map<Integer, String> gabaritoPorNumero = new HashMap<>();
         texto = extrairBlocoGabarito(texto, gabaritoPorNumero);
 
-        // Segmentação local só para ler as linhas de gabarito; o documento inteiro
-        // (sem essas linhas) vai ao serviço do modelo em UMA única requisição.
+        // Um bloco por questão, cada um analisado em sua própria requisição. Enviar o documento
+        // inteiro junto fazia o serviço do modelo fundir várias questões numa só (e o resto do
+        // caderno, como cartão-resposta, ia parar nas alternativas da última).
         List<String> semGabarito = new ArrayList<>();
         List<String> letras = new ArrayList<>();
         for (String bloco : segmentar(texto)) {
@@ -64,12 +65,19 @@ public class ModeloQuestoesService {
         }
         if (semGabarito.isEmpty()) return questoes;
 
-        // O serviço pode devolver um objeto (uma questão) ou um array (várias questões)
-        Object resposta = post("/analisar", String.join("\n\n", semGabarito));
-        JSONArray analises = resposta instanceof JSONArray ? (JSONArray) resposta
-                : new JSONArray().put(resposta);
+        JSONArray analises = new JSONArray();
+        for (String bloco : semGabarito) {
+            Object resposta = post("/analisar", bloco);
+            if (resposta instanceof JSONArray) {
+                // Mais de um item para um bloco só: mantém o primeiro, que é o do próprio bloco
+                JSONObject primeiro = ((JSONArray) resposta).optJSONObject(0);
+                analises.put(primeiro != null ? primeiro : new JSONObject().put("is_question", false));
+            } else {
+                analises.put(resposta);
+            }
+        }
 
-        // O gabarito só é associado por posição quando o modelo devolveu uma análise por bloco
+        // Uma análise por bloco: o gabarito sempre pode ser associado pela posição
         boolean mapeavel = analises.length() == letras.size();
         for (int i = 0; i < analises.length(); i++) {
             JSONObject analise = analises.optJSONObject(i);
@@ -105,6 +113,10 @@ public class ModeloQuestoesService {
     private static final Pattern ALT = Pattern.compile("(?:^|\\s)\\(?([a-eA-E])[).]\\s+");
     private static final Pattern GABARITO = Pattern.compile(
             "^[ \\t]*(?:gabarito|resposta|resp\\.?)[ \\t]*[:\\-]?[ \\t]*\\(?([a-eA-E])\\)?[ \\t]*\\.?[ \\t]*$", FLAGS);
+    /** Linhas de navegação/cabeçalho de página que o PDF traz entre as questões. */
+    private static final Pattern RUIDO_DE_PAGINA = Pattern.compile(
+            "^[ \\t]*(?:voltar ao sum[áa]rio|subsecretaria de educa[çc][ãa]o.*|ger[êe]ncia de ensino m[ée]dio"
+            + "|(?:escola|estudante|professor\\(a\\)):.*|descritor mobilizado:.*)[ \\t]*$", FLAGS);
     private static final Pattern LINHA_EM_BRANCO = Pattern.compile("\\n[ \\t]*\\n");
 
     static List<String> segmentar(String texto) {
@@ -112,7 +124,7 @@ public class ModeloQuestoesService {
         if (blocos == null) blocos = segmentarPorAlternativas(texto);
         List<String> saida = new ArrayList<>();
         for (String b : blocos) {
-            String t = b.strip();
+            String t = RUIDO_DE_PAGINA.matcher(b).replaceAll("").strip();
             if (t.length() >= TAMANHO_MIN_BLOCO) saida.add(t);
         }
         return saida;
@@ -122,12 +134,18 @@ public class ModeloQuestoesService {
     private static List<String> segmentarPorNumero(String texto) {
         List<Integer> inicios = new ArrayList<>();
         Integer ultimo = null;
+        java.util.Set<Integer> vistos = new java.util.HashSet<>();
         Matcher m = MARCA_NUMERO.matcher(texto);
         while (m.find()) {
             int n = Integer.parseInt(m.group(1) != null ? m.group(1) : m.group(2));
-            if (ultimo == null || (n > ultimo && n <= ultimo + 2)) {
+            boolean reinicio = n == 1 && ultimo != null && ultimo > 1;          // nova atividade/caderno recomeça em 1
+            boolean proxima = ultimo == null || (n > ultimo && n <= ultimo + 2);
+            boolean foraDeOrdem = ultimo != null && n < ultimo && n >= ultimo - 3 && !vistos.contains(n); // "10." antes de "9."
+            if (reinicio) vistos.clear();
+            if (proxima || reinicio || foraDeOrdem) {
                 inicios.add(m.start());
-                ultimo = n;
+                vistos.add(n);
+                ultimo = foraDeOrdem ? ultimo : n;
             }
         }
         if (inicios.size() < 2) return null;

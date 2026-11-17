@@ -130,6 +130,24 @@ public class PDFImageExtractorService {
                         File outputFile = outputDir.resolve(filename).toFile();
 
                         BufferedImage bufferedImage = image.getImage();
+
+                        // Uma imagem só com os cinco gráficos A..E: vira cinco imagens, na ordem de leitura
+                        List<FigurasDeAlternativas.Painel> paineis = FigurasDeAlternativas.dividirComposta(bufferedImage);
+                        if (paineis != null) {
+                            for (FigurasDeAlternativas.Painel painel : paineis) {
+                                String nomePainel = String.format("%s-page%d-img%d.png",
+                                        prefix != null ? prefix : "image", pageNum + 1, imageCounter);
+                                File arquivoPainel = outputDir.resolve(nomePainel).toFile();
+                                ImageIO.write(painel.imagem(), "PNG", arquivoPainel);
+                                extractedImages.add(new ImagemExtraida(arquivoPainel.getAbsolutePath(),
+                                        subposicao(posicao, painel)));
+                                imageCounter++;
+                            }
+                            logger.info("Imagem {}x{} da página {} dividida em 5 painéis (alternativas em figura)",
+                                    width, height, pageNum + 1);
+                            continue;
+                        }
+
                         ImageIO.write(bufferedImage, "PNG", outputFile);
 
                         extractedImages.add(new ImagemExtraida(outputFile.getAbsolutePath(), posicao));
@@ -141,6 +159,9 @@ public class PDFImageExtractorService {
                         logger.warn("Erro ao extrair imagem da página {}: {}", pageNum + 1, e.getMessage());
                     }
                 }
+
+                imageCounter = extrairGraficosVetoriais(document, page, pageNum, posicoes, outputDir, prefix,
+                        imageCounter, extractedImages);
             }
 
             // Sem fallback de renderização de página: o texto vem do PDFBox, e um print da página
@@ -153,6 +174,74 @@ public class PDFImageExtractorService {
         }
 
         return extractedImages;
+    }
+
+    /** Posição de um painel dentro da posição da imagem composta de onde ele saiu. */
+    private PosicaoImagem subposicao(PosicaoImagem pai, FigurasDeAlternativas.Painel p) {
+        if (pai == null) return null;
+        double alt = pai.base() - pai.topo(), larg = pai.dir() - pai.esq();
+        return new PosicaoImagem(pai.pagina(), pai.topo() + p.topo() * alt, pai.topo() + p.base() * alt,
+                pai.esq() + p.esq() * larg, pai.esq() + p.dir() * larg);
+    }
+
+    /**
+     * Gráficos desenhados em vetor (sem imagem no PDF) dentro de uma moldura retangular: renderiza a página e
+     * recorta a moldura, para que cada um vire uma imagem (ex.: as cinco alternativas de gráficos de barras).
+     * Molduras que coincidem com uma imagem já extraída são ignoradas.
+     *
+     * @return o contador de imagens atualizado
+     */
+    private int extrairGraficosVetoriais(PDDocument document, PDPage page, int pageNum,
+                                         Map<String, PosicaoImagem> posicoes, Path outputDir, String prefix,
+                                         int imageCounter, List<ImagemExtraida> extraidas) {
+        List<java.awt.geom.Rectangle2D.Double> molduras = FigurasDeAlternativas.molduraDeGraficosVetoriais(page);
+        if (molduras.isEmpty()) return imageCounter;
+        try {
+            double larguraPagina = page.getCropBox().getWidth(), alturaPagina = page.getCropBox().getHeight();
+            final float escala = 2.0f; // 144 dpi
+            BufferedImage renderizada = null;
+            for (java.awt.geom.Rectangle2D.Double m : molduras) {
+                PosicaoImagem posMoldura = new PosicaoImagem(pageNum + 1, m.y / alturaPagina, (m.y + m.height) / alturaPagina,
+                        m.x / larguraPagina, (m.x + m.width) / larguraPagina);
+                boolean jaTemImagem = false;
+                for (PosicaoImagem existente : posicoes.values()) {
+                    if (sobreposicao(posMoldura, existente) > 0.3) {
+                        jaTemImagem = true;
+                        break;
+                    }
+                }
+                if (jaTemImagem) continue;
+
+                if (renderizada == null) {
+                    renderizada = new org.apache.pdfbox.rendering.PDFRenderer(document).renderImage(pageNum, escala);
+                }
+                int x = (int) Math.max(0, Math.floor((m.x - 2) * escala));
+                int y = (int) Math.max(0, Math.floor((m.y - 2) * escala));
+                int w = (int) Math.min(renderizada.getWidth() - x, Math.ceil((m.width + 4) * escala));
+                int h = (int) Math.min(renderizada.getHeight() - y, Math.ceil((m.height + 4) * escala));
+                if (w <= 0 || h <= 0) continue;
+
+                String nome = String.format("%s-page%d-vet%d.png", prefix != null ? prefix : "image", pageNum + 1, imageCounter);
+                File arquivo = outputDir.resolve(nome).toFile();
+                ImageIO.write(renderizada.getSubimage(x, y, w, h), "PNG", arquivo);
+                extraidas.add(new ImagemExtraida(arquivo.getAbsolutePath(), posMoldura));
+                imageCounter++;
+                logger.info("Gráfico vetorial recortado da página {} ({}x{} pt) -> {}", pageNum + 1,
+                        Math.round(m.width), Math.round(m.height), nome);
+            }
+        } catch (Exception e) {
+            logger.warn("Erro ao recortar gráficos vetoriais da página {}: {}", pageNum + 1, e.getMessage());
+        }
+        return imageCounter;
+    }
+
+    /** Área da interseção dividida pela área da menor das duas (0..1). */
+    private double sobreposicao(PosicaoImagem a, PosicaoImagem b) {
+        double w = Math.min(a.dir(), b.dir()) - Math.max(a.esq(), b.esq());
+        double h = Math.min(a.base(), b.base()) - Math.max(a.topo(), b.topo());
+        if (w <= 0 || h <= 0) return 0;
+        double menor = Math.min((a.dir() - a.esq()) * (a.base() - a.topo()), (b.dir() - b.esq()) * (b.base() - b.topo()));
+        return menor <= 0 ? 0 : (w * h) / menor;
     }
 
     /**
@@ -174,6 +263,8 @@ public class PDFImageExtractorService {
         try {
             float alturaPagina = page.getCropBox().getHeight();
             float baseDaPagina = page.getCropBox().getLowerLeftY();
+            float larguraPagina = page.getCropBox().getWidth();
+            float esquerdaDaPagina = page.getCropBox().getLowerLeftX();
 
             ImagePositionEngine engine = new ImagePositionEngine();
             engine.processPage(page);
@@ -182,7 +273,10 @@ public class PDFImageExtractorService {
                 // retangulo = {x, y (borda inferior, coordenada PDF), largura, altura}
                 double base = 1.0 - ((retangulo[1] - baseDaPagina) / alturaPagina);
                 double topo = 1.0 - ((retangulo[1] + retangulo[3] - baseDaPagina) / alturaPagina);
-                posicoes.put(nome, new PosicaoImagem(pagina, Math.max(0, topo), Math.min(1, base)));
+                double esq = (retangulo[0] - esquerdaDaPagina) / larguraPagina;
+                double dir = esq + retangulo[2] / larguraPagina;
+                posicoes.put(nome, new PosicaoImagem(pagina, Math.max(0, topo), Math.min(1, base),
+                        Math.max(0, esq), Math.min(1, dir)));
             });
         } catch (Exception e) {
             logger.debug("Não foi possível obter a posição das imagens da página {}: {}", pagina, e.getMessage());

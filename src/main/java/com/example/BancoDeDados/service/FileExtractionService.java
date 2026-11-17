@@ -26,11 +26,14 @@ public class FileExtractionService {
     private final ParallelOcrService parallelOcrService;
     private final TextCleanerService textCleaner;
     private final PDFImageExtractorService pdfImageExtractor;
+    private final GabaritoMascaraService gabaritoMascara;
 
     public FileExtractionService(OcrService ocrService,
                                  ParallelOcrService parallelOcrService,
                                  TextCleanerService textCleaner,
-                                 PDFImageExtractorService pdfImageExtractor) throws IOException {
+                                 PDFImageExtractorService pdfImageExtractor,
+                                 GabaritoMascaraService gabaritoMascara) throws IOException {
+        this.gabaritoMascara = gabaritoMascara;
         this.tmpRoot = Files.createTempDirectory("extractor-");
         this.ocrService = ocrService;
         this.parallelOcrService = parallelOcrService;
@@ -93,6 +96,10 @@ public class FileExtractionService {
             }
         }
 
+        // Máscara de correção (gabarito em bolinhas): lê a marcação e tira a imagem da lista, para que
+        // não seja anexada a uma questão como se fosse figura dela nem passe pelo OCR
+        separarMascarasDeGabarito(result);
+
         // Run OCR on saved images (paralelo para melhor performance)
         if (!ocrService.isTesseractAvailable()) {
             System.out.println("AVISO: Tesseract OCR não está disponível. Imagens não serão processadas via OCR.");
@@ -118,6 +125,21 @@ public class FileExtractionService {
         }
 
         return result;
+    }
+
+    private void separarMascarasDeGabarito(ExtractionResult result) {
+        List<String> restantes = new java.util.ArrayList<>();
+        for (String caminho : result.getSavedFiles()) {
+            File arquivo = new File(caminho);
+            int[] mascara = gabaritoMascara.ler(arquivo);
+            if (mascara == null) {
+                restantes.add(caminho);
+            } else {
+                result.addMascaraGabarito(mascara);
+                result.getImagePositions().remove(arquivo.getName());
+            }
+        }
+        result.setSavedFiles(restantes);
     }
 
     private void renderPdfPages(Path pdfPath, Path outDir, ExtractionResult result) throws IOException {
@@ -151,8 +173,8 @@ public class FileExtractionService {
      */
     private String extractTextFromPDF(Path pdfPath) throws IOException {
         try (PDDocument document = PDDocument.load(pdfPath.toFile())) {
-            org.apache.pdfbox.text.PDFTextStripper stripper = new org.apache.pdfbox.text.PDFTextStripper();
-            return stripper.getText(document);
+            // Ordem de leitura por posição/coluna, símbolos de equação e radical (ver PdfTextExtractor)
+            return PdfTextExtractor.extrair(document);
         }
     }
 }

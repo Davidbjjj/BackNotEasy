@@ -45,6 +45,9 @@ public class IAController {
     @Autowired
     private ImagemQuestaoAssociadorService imagemAssociador;
 
+    @Autowired
+    private com.example.BancoDeDados.service.OcrService ocrService;
+
     /**
      * Novo endpoint: Processa PDF com OCR e envia para IA com contexto das imagens
      * POST /serviceIA/{listaId}/processar-pdf-com-imagens
@@ -82,20 +85,28 @@ public class IAController {
             List<com.example.BancoDeDados.service.LinhaPdf> linhasPdf =
                 (List<com.example.BancoDeDados.service.LinhaPdf>) resultado.get("linhasPdf");
 
+            // ASSOCIAR IMAGENS ÀS QUESTÕES CORRETAS (antes de salvar: a imagem de alternativas vira texto)
+            Map<Integer, List<Integer>> imagensPorQuestao = new HashMap<>();
+            Set<Integer> imagensViraramTexto = new HashSet<>();
+            Map<Integer, Integer> letraPorImagem = new HashMap<>();
+            if (arquivosTemp != null && !arquivosTemp.isEmpty() && !questoesDTO.isEmpty()) {
+                // PDF: associa pela posição da imagem na página; sem posição, cai no texto OCR
+                boolean temPosicao = posicoesImagens != null && linhasPdf != null && !linhasPdf.isEmpty()
+                    && posicoesImagens.stream().anyMatch(Objects::nonNull);
+                imagensPorQuestao = temPosicao
+                    ? imagemAssociador.agruparImagensPorPosicao(questoesDTO, linhasPdf, posicoesImagens)
+                    : imagemAssociador.agruparImagensPorQuestao(textosOcr, questoesDTO.size());
+                imagensViraramTexto = alternativasDasImagens(questoesDTO, imagensPorQuestao, textosOcr, arquivosTemp);
+                letraPorImagem = figurasComoAlternativas(questoesDTO, imagensPorQuestao, arquivosTemp,
+                        posicoesImagens, imagensViraramTexto);
+            }
+
             // Converter DTO para Model e salvar
             List<Questao> questoes = converterDTOParaModel(questoesDTO);
             listaService.salvarQuestoesComLista(questoes, listaId);
 
-            // ASSOCIAR IMAGENS ÀS QUESTÕES CORRETAS
             int totalImagensSalvas = 0;
             if (arquivosTemp != null && !arquivosTemp.isEmpty() && !questoes.isEmpty()) {
-                // PDF: associa pela posição da imagem na página; sem posição, cai no texto OCR
-                boolean temPosicao = posicoesImagens != null && linhasPdf != null && !linhasPdf.isEmpty()
-                    && posicoesImagens.stream().anyMatch(Objects::nonNull);
-                Map<Integer, List<Integer>> imagensPorQuestao = temPosicao
-                    ? imagemAssociador.agruparImagensPorPosicao(questoesDTO, linhasPdf, posicoesImagens)
-                    : imagemAssociador.agruparImagensPorQuestao(textosOcr, questoes.size());
-
                 // Salvar apenas as imagens relevantes para cada questão
                 for (int i = 0; i < questoes.size(); i++) {
                     Questao questao = questoes.get(i);
@@ -107,17 +118,19 @@ public class IAController {
                         // Filtrar apenas as imagens desta questão
                         List<String> imagensDaQuestao = new ArrayList<>();
                         List<String> ocrsRelacionados = new ArrayList<>();
+                        List<Integer> letrasDasImagens = new ArrayList<>();
 
                         for (Integer indice : indicesImagens) {
-                            if (indice < arquivosTemp.size()) {
+                            if (indice < arquivosTemp.size() && !imagensViraramTexto.contains(indice)) {
                                 imagensDaQuestao.add(arquivosTemp.get(indice));
                                 ocrsRelacionados.add(textosOcr.get(indice));
+                                letrasDasImagens.add(letraPorImagem.get(indice));
                             }
                         }
 
                         if (!imagensDaQuestao.isEmpty()) {
                             List<com.example.BancoDeDados.Model.QuestaoImagem> imagens =
-                                imagemQuestaoService.salvarImagensQuestao(questao, imagensDaQuestao, ocrsRelacionados);
+                                imagemQuestaoService.salvarImagensQuestao(questao, imagensDaQuestao, ocrsRelacionados, letrasDasImagens);
                             totalImagensSalvas += imagens.size();
 
                             System.out.println("Questão " + numeroQuestao + ": " + imagens.size() + " imagem(ns) associada(s)");
@@ -154,6 +167,125 @@ public class IAController {
                 "mensagem", e.getMessage()
             ));
         }
+    }
+
+    /**
+     * Questão sem alternativas no texto do PDF, mas com uma imagem que traz as alternativas escritas
+     * (ex.: quadro "A) 135 000,00. B) ..."): usa o OCR dessa imagem como alternativas, desde que o
+     * {@link AlternativasOcrParser} o considere confiável. Quando o OCR comum não serve porque as alternativas
+     * têm expoentes (notação científica: "1·10⁴"), a imagem é lida de novo separando os expoentes
+     * ({@link com.example.BancoDeDados.service.OcrService#lerAlternativasComExpoentes}). Devolve os índices
+     * das imagens consumidas (que não precisam mais ser anexadas, pois agora são texto).
+     */
+    private Set<Integer> alternativasDasImagens(List<com.example.BancoDeDados.dto.QuestaoExtraidaDTO> questoesDTO,
+                                                Map<Integer, List<Integer>> imagensPorQuestao,
+                                                List<String> textosOcr,
+                                                List<String> arquivosTemp) {
+        Set<Integer> consumidas = new HashSet<>();
+        for (int i = 0; i < questoesDTO.size(); i++) {
+            com.example.BancoDeDados.dto.QuestaoExtraidaDTO dto = questoesDTO.get(i);
+            if (alternativasComTexto(dto) >= 2) continue;
+            List<Integer> indices = imagensPorQuestao.get(i + 1);
+            if (indices == null) continue;
+            for (Integer indice : indices) {
+                if (indice == null || indice >= textosOcr.size()) continue;
+                List<String> alternativas = com.example.BancoDeDados.service.AlternativasOcrParser.parse(textosOcr.get(indice));
+                if (alternativas == null && arquivosTemp != null && indice < arquivosTemp.size()) {
+                    alternativas = ocrService.lerAlternativasComExpoentes(new File(arquivosTemp.get(indice)));
+                }
+                if (alternativas == null) continue;
+                dto.getAlternativas().clear();
+                for (int j = 0; j < alternativas.size(); j++) {
+                    dto.addAlternativa(String.valueOf((char) ('a' + j)), alternativas.get(j));
+                }
+                consumidas.add(indice);
+                System.out.println("Questão " + (i + 1) + ": alternativas lidas da imagem por OCR");
+                break;
+            }
+        }
+        return consumidas;
+    }
+
+    /** Alternativas com texto de verdade: "A) B) C)" sem conteúdo (o conteúdo é imagem) não contam. */
+    private int alternativasComTexto(com.example.BancoDeDados.dto.QuestaoExtraidaDTO dto) {
+        if (dto.getAlternativas() == null) return 0;
+        int n = 0;
+        for (com.example.BancoDeDados.dto.QuestaoExtraidaDTO.AlternativaDTO a : dto.getAlternativas()) {
+            if (a.getTexto() != null && !a.getTexto().isBlank()) n++;
+        }
+        return n;
+    }
+
+    /**
+     * Questão cujas alternativas são figuras (ex.: cinco gráficos A..E): reconhece o grupo de cinco imagens
+     * do mesmo tamanho, ordena na ordem de leitura (linha de cima para baixo, da esquerda para a direita) e
+     * atribui A..E. As alternativas da questão passam a ser "(figura)" e cada imagem fica ligada à sua letra
+     * (QuestaoImagem.alternativaIndice). Imagens fora do grupo (ex.: a tabela do enunciado) seguem como estão.
+     *
+     * @return índice da imagem (em arquivosTemp) -> alternativa 0..4
+     */
+    private Map<Integer, Integer> figurasComoAlternativas(List<com.example.BancoDeDados.dto.QuestaoExtraidaDTO> questoesDTO,
+                                                          Map<Integer, List<Integer>> imagensPorQuestao,
+                                                          List<String> arquivosTemp,
+                                                          List<com.example.BancoDeDados.service.PosicaoImagem> posicoes,
+                                                          Set<Integer> jaConsumidas) {
+        Map<Integer, Integer> resultado = new HashMap<>();
+        if (posicoes == null) return resultado;
+        for (int i = 0; i < questoesDTO.size(); i++) {
+            com.example.BancoDeDados.dto.QuestaoExtraidaDTO dto = questoesDTO.get(i);
+            if (alternativasComTexto(dto) >= 2) continue;
+            List<Integer> indices = imagensPorQuestao.get(i + 1);
+            if (indices == null || indices.size() < 5) continue;
+
+            // tamanho de cada imagem candidata
+            Map<Integer, int[]> tamanho = new HashMap<>();
+            for (Integer idx : indices) {
+                if (idx == null || idx >= arquivosTemp.size() || idx >= posicoes.size() || posicoes.get(idx) == null
+                        || jaConsumidas.contains(idx)) continue;
+                try {
+                    java.awt.image.BufferedImage bi = javax.imageio.ImageIO.read(new File(arquivosTemp.get(idx)));
+                    if (bi != null) tamanho.put(idx, new int[]{bi.getWidth(), bi.getHeight()});
+                } catch (IOException ignored) {
+                    // imagem ilegível: fica de fora do grupo
+                }
+            }
+
+            // grupo de exatamente cinco imagens de mesmo tamanho (±12%) e na mesma página
+            List<Integer> grupo = null;
+            for (Integer a : tamanho.keySet()) {
+                List<Integer> g = new ArrayList<>();
+                for (Integer b : tamanho.keySet()) {
+                    int[] ta = tamanho.get(a), tb = tamanho.get(b);
+                    if (Math.abs(ta[0] - tb[0]) <= 0.12 * ta[0] && Math.abs(ta[1] - tb[1]) <= 0.12 * ta[1]
+                            && posicoes.get(a).pagina() == posicoes.get(b).pagina()) g.add(b);
+                }
+                if (g.size() == 5) {
+                    grupo = g;
+                    break;
+                }
+            }
+            if (grupo == null) continue;
+
+            // ordem de leitura: linhas por altura (tolerância de 3% da página), dentro da linha pela esquerda
+            grupo.sort(Comparator.comparingDouble((Integer k) -> posicoes.get(k).topo()));
+            List<List<Integer>> linhas = new ArrayList<>();
+            for (Integer k : grupo) {
+                if (linhas.isEmpty() || posicoes.get(k).topo() - posicoes.get(linhas.get(linhas.size() - 1).get(0)).topo() > 0.03) {
+                    linhas.add(new ArrayList<>());
+                }
+                linhas.get(linhas.size() - 1).add(k);
+            }
+            int letra = 0;
+            for (List<Integer> linha : linhas) {
+                linha.sort(Comparator.comparingDouble((Integer k) -> posicoes.get(k).esq()));
+                for (Integer k : linha) resultado.put(k, letra++);
+            }
+
+            dto.getAlternativas().clear();
+            for (int j = 0; j < 5; j++) dto.addAlternativa(String.valueOf((char) ('a' + j)), "(figura)");
+            System.out.println("Questão " + (i + 1) + ": alternativas são figuras (5 imagens ligadas às letras A-E)");
+        }
+        return resultado;
     }
 
     /**

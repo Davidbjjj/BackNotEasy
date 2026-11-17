@@ -23,8 +23,12 @@ public class ParallelOcrService {
     private final OcrService ocrService;
     private final ExecutorService executorService;
 
-    public ParallelOcrService(OcrService ocrService) {
+    private final long timeoutMinutos;
+
+    public ParallelOcrService(OcrService ocrService,
+                              @org.springframework.beans.factory.annotation.Value("${ocr.timeout-minutos:30}") long timeoutMinutos) {
         this.ocrService = ocrService;
+        this.timeoutMinutos = timeoutMinutos;
         this.executorService = Executors.newFixedThreadPool(
             MAX_THREADS,
             r -> {
@@ -72,9 +76,9 @@ public class ParallelOcrService {
         // Aguardar todos os processos terminarem
         try {
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-                .get(5, TimeUnit.MINUTES); // Timeout de 5 minutos
+                .get(timeoutMinutos, TimeUnit.MINUTES);
         } catch (TimeoutException e) {
-            logger.error("Timeout ao processar OCR em paralelo após 5 minutos");
+            logger.error("Timeout ao processar OCR em paralelo após {} minutos", timeoutMinutos);
         } catch (Exception e) {
             logger.error("Erro durante processamento paralelo: {}", e.getMessage());
         }
@@ -165,7 +169,7 @@ public class ParallelOcrService {
         // Aguardar conclusão
         try {
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-                .get(5, TimeUnit.MINUTES);
+                .get(timeoutMinutos, TimeUnit.MINUTES);
         } catch (Exception e) {
             logger.error("Erro durante processamento: {}", e.getMessage());
         }

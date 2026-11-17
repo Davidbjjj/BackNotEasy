@@ -2,7 +2,6 @@ package com.example.BancoDeDados.service;
 
 import net.sourceforge.tess4j.ITesseract;
 import net.sourceforge.tess4j.Tesseract;
-import net.sourceforge.tess4j.TesseractException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -14,6 +13,9 @@ import java.io.File;
 @Service
 public class OcrService {
     private static final Logger logger = LoggerFactory.getLogger(OcrService.class);
+
+    /** Confiança mínima (0-100) do Tesseract para aceitar uma linha de OCR. */
+    private static final float MIN_CONFIANCA_LINHA = 60f;
 
     private volatile boolean tesseractAvailable = true;
     private volatile boolean initialized = false;
@@ -145,8 +147,19 @@ public class OcrService {
                 return "";
             }
 
-            // Tentar OCR com timeout implícito e tratamento de erro
-            String result = tesseract.doOCR(bi);
+            // OCR por linha, descartando as de baixa confiança: figuras, gráficos e cartões-resposta
+            // viram "texto" sem sentido (ex.: "3,844-10º", "pededejspobedeiic") que contamina as questões
+            StringBuilder sb = new StringBuilder();
+            for (net.sourceforge.tess4j.Word linha : tesseract.getWords(bi,
+                    net.sourceforge.tess4j.ITessAPI.TessPageIteratorLevel.RIL_TEXTLINE)) {
+                if (linha.getConfidence() >= MIN_CONFIANCA_LINHA && linha.getText() != null
+                        && !linha.getText().isBlank()) {
+                    sb.append(linha.getText().strip()).append('\n');
+                } else {
+                    logger.debug("Linha de OCR descartada (confiança {}): {}", linha.getConfidence(), linha.getText());
+                }
+            }
+            String result = sb.toString();
 
             if (result == null || result.isBlank()) {
                 logger.debug("OCR não encontrou texto em: {}", image.getName());
@@ -156,10 +169,6 @@ public class OcrService {
             logger.debug("OCR extraiu {} caracteres de: {} (thread: {})",
                         result.length(), image.getName(), Thread.currentThread().getName());
             return result.trim();
-
-        } catch (TesseractException e) {
-            logger.error("Erro do Tesseract ao processar {}: {}", image.getName(), e.getMessage());
-            return "";
 
         } catch (Error e) {
             // Captura java.lang.Error (como Invalid memory access)
@@ -171,6 +180,30 @@ public class OcrService {
         } catch (Exception e) {
             logger.error("Erro inesperado ao processar OCR de {}: {}", image.getName(), e.getMessage());
             return "";
+        }
+    }
+
+    /**
+     * Lê as cinco alternativas de uma imagem em que elas estão escritas com expoentes (ex.: "A) 1·10⁴").
+     * Usa uma instância própria do Tesseract, porque muda o modo de segmentação e a lista de caracteres.
+     *
+     * @return as alternativas (sem o "A)"), na ordem; null se a imagem não for isso ou a leitura for duvidosa
+     */
+    public java.util.List<String> lerAlternativasComExpoentes(File image) {
+        if (!initialized) {
+            initializeTesseract();
+        }
+        if (!tesseractAvailable) return null;
+        try {
+            BufferedImage bi = ImageIO.read(image);
+            if (bi == null) return null;
+            Tesseract t = new Tesseract();
+            if (configuredDatapath != null) t.setDatapath(configuredDatapath);
+            t.setLanguage(configuredLanguage);
+            return AlternativasComExpoentes.ler(bi, t);
+        } catch (Exception | Error e) {
+            logger.warn("Falha ao ler alternativas com expoentes de {}: {}", image.getName(), e.getMessage());
+            return null;
         }
     }
 

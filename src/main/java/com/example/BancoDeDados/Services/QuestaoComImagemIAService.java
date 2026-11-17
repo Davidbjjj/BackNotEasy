@@ -22,6 +22,9 @@ public class QuestaoComImagemIAService {
 
     private static final Logger logger = LoggerFactory.getLogger(QuestaoComImagemIAService.class);
 
+    /** A partir deste tamanho o texto do PDF é considerado "próprio" (não escaneado). */
+    private static final int TEXTO_MINIMO_PARA_IGNORAR_OCR = 200;
+
     private final FileExtractionService fileExtractionService;
     private final QuestionParserService questionParserService;
     private final PromptBuilder promptBuilder;
@@ -63,6 +66,9 @@ public class QuestaoComImagemIAService {
 
         // 4. Parse da resposta da IA
         List<QuestaoExtraidaDTO> questoesExtraidas = parseRespostaIA(respostaIA);
+
+        // 4b. Gabarito que só existe como imagem (máscara de correção em bolinhas)
+        aplicarGabaritoDasMascaras(questoesExtraidas, extraction.getMascarasGabarito());
 
         // 5. Preparar dados de imagens para resposta
         List<Map<String, Object>> imagensInfo = new ArrayList<>();
@@ -116,6 +122,17 @@ public class QuestaoComImagemIAService {
         }
 
         String textoPrincipal = extraction.getText();
+
+        // PDF com texto próprio: as imagens são figuras/gráficos/cartão-resposta, e o OCR delas vira
+        // lixo ("o2 A B . E", "A) 1-10º" sem o expoente) que acabava colado nas alternativas da última
+        // questão. As imagens continuam associadas às questões pela posição; o OCR só entra quando o
+        // documento não tem texto (escaneado).
+        if (textoPrincipal != null && textoPrincipal.strip().length() >= TEXTO_MINIMO_PARA_IGNORAR_OCR) {
+            logger.info("Texto próprio do documento ({} caracteres): OCR das imagens não entra no prompt",
+                        textoPrincipal.strip().length());
+            return texto.toString();
+        }
+
         extraction.getImageOcr().entrySet().stream()
             .sorted(Map.Entry.comparingByKey())
             .forEach(entry -> {
@@ -131,6 +148,46 @@ public class QuestaoComImagemIAService {
             });
 
         return texto.toString();
+    }
+
+    /**
+     * Preenche o gabarito das questões que não o trouxeram no texto, usando as máscaras de correção.
+     * Cada máscara vale para uma "atividade": a numeração das questões recomeça em 1 a cada atividade,
+     * e a k-ésima atividade do documento corresponde à k-ésima máscara. Se a quantidade de atividades
+     * não bater com a de máscaras, nada é aplicado (melhor sem gabarito do que com o errado).
+     */
+    private void aplicarGabaritoDasMascaras(List<QuestaoExtraidaDTO> questoes, List<int[]> mascaras) {
+        if (questoes.isEmpty() || mascaras == null || mascaras.isEmpty()) return;
+
+        int[] numeros = new int[questoes.size()];
+        int[] atividade = new int[questoes.size()];
+        int atual = 0, anterior = 0;
+        for (int i = 0; i < questoes.size(); i++) {
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\d{1,3})")
+                    .matcher(questoes.get(i).getContexto() == null ? "" : questoes.get(i).getContexto());
+            numeros[i] = m.find() ? Integer.parseInt(m.group(1)) : anterior + 1;
+            if (i > 0 && numeros[i] == 1 && anterior > 1) atual++; // numeração recomeçou: nova atividade
+            atividade[i] = atual;
+            anterior = numeros[i];
+        }
+        int totalAtividades = atual + 1;
+        if (totalAtividades != mascaras.size()) {
+            logger.warn("{} atividade(s) no texto e {} máscara(s) de correção: gabarito das imagens não aplicado",
+                        totalAtividades, mascaras.size());
+            return;
+        }
+
+        int aplicados = 0;
+        for (int i = 0; i < questoes.size(); i++) {
+            QuestaoExtraidaDTO q = questoes.get(i);
+            if (q.getGabarito() != null && !q.getGabarito().isBlank()) continue; // o gabarito do texto tem prioridade
+            int[] mascara = mascaras.get(atividade[i]);
+            int n = numeros[i];
+            if (n < 1 || n > mascara.length || mascara[n - 1] < 0) continue;
+            q.setGabarito(String.valueOf((char) ('a' + mascara[n - 1])));
+            aplicados++;
+        }
+        logger.info("Gabarito das máscaras de correção aplicado a {} questão(ões)", aplicados);
     }
 
     /** True se (quase) todas as palavras do OCR já aparecem no texto principal. */

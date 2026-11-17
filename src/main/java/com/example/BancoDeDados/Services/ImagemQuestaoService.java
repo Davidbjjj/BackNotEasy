@@ -59,6 +59,18 @@ public class ImagemQuestaoService {
     public List<QuestaoImagem> salvarImagensQuestao(Questao questao,
                                                      List<String> caminhoTemporarios,
                                                      List<String> textosOcr) throws IOException {
+        return salvarImagensQuestao(questao, caminhoTemporarios, textosOcr, null);
+    }
+
+    /**
+     * @param alternativaIndices para cada imagem, a alternativa (0=A..4=E) que ela representa quando as
+     *                           alternativas da questão são figuras; null (ou entrada nula) nas imagens comuns
+     */
+    @Transactional
+    public List<QuestaoImagem> salvarImagensQuestao(Questao questao,
+                                                     List<String> caminhoTemporarios,
+                                                     List<String> textosOcr,
+                                                     List<Integer> alternativaIndices) throws IOException {
 
         List<QuestaoImagem> imagens = new ArrayList<>();
 
@@ -82,6 +94,12 @@ public class ImagemQuestaoService {
             // Analisar texto OCR para detectar onde exibir a imagem
             String textoOcr = i < textosOcr.size() ? textosOcr.get(i) : "";
             DeteccaoExibicao deteccao = detectarOndeExibir(textoOcr, questao.getEnunciado());
+            Integer alternativa = alternativaIndices != null && i < alternativaIndices.size()
+                    ? alternativaIndices.get(i) : null;
+            if (alternativa != null) { // a imagem É a alternativa: aparece nela, não no enunciado
+                deteccao.exibirNoEnunciado = false;
+                deteccao.exibirNasAlternativas = true;
+            }
 
             // Criar registro no banco com dados da imagem
             QuestaoImagem imagem = QuestaoImagem.builder()
@@ -94,6 +112,7 @@ public class ImagemQuestaoService {
                 .textoOcr(textoOcr)
                 .exibirNoEnunciado(deteccao.exibirNoEnunciado)
                 .exibirNasAlternativas(deteccao.exibirNasAlternativas)
+                .alternativaIndice(alternativa)
                 .etag(gerarEtag(dadosImagem, nomeUnico))
                 .build();
 

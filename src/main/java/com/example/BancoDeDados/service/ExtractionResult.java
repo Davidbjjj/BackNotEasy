@@ -14,7 +14,19 @@ public class ExtractionResult {
     // Linhas de texto do PDF com posição, usadas para saber onde cada questão começa
     private List<LinhaPdf> pdfLines = new ArrayList<>();
 
+    // Máscaras de correção (gabarito em bolinhas) lidas das imagens, na ordem do documento.
+    // Cada uma tem, por questão, o índice da alternativa marcada (0=A) ou -1.
+    private List<int[]> mascarasGabarito = new ArrayList<>();
+
     public ExtractionResult() {}
+
+    public List<int[]> getMascarasGabarito() {
+        return mascarasGabarito;
+    }
+
+    public void addMascaraGabarito(int[] mascara) {
+        this.mascarasGabarito.add(mascara);
+    }
 
     public Map<String, PosicaoImagem> getImagePositions() {
         return imagePositions;

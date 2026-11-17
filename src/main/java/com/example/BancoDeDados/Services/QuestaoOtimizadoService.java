@@ -67,17 +67,9 @@ public class QuestaoOtimizadoService {
                 .rubrica(incluirGabarito ? q.getRubrica() : null)
                 .dificuldade(incluirGabarito ? q.getDificuldade() : null)
                 .tags(incluirGabarito ? new java.util.ArrayList<>(q.getTags()) : null)
-                .alternativas(
-                    alternativasPorQuestao.getOrDefault(q.getId(), Collections.emptyList())
-                        .stream()
-                        .map(a -> QuestaoComAlternativasDTO.AlternativaDTO.builder()
-                            .id(a.getId())
-                            .ordem(a.getOrdem())
-                            .texto(a.getTexto())
-                            .build())
-                        .collect(Collectors.toList())
-                )
-                .imagens(converterImagensParaDTO(q.getImagens()))
+                .alternativas(montarAlternativas(alternativasPorQuestao.getOrDefault(q.getId(), Collections.emptyList()),
+                        converterImagensParaDTO(q.getImagens())))
+                .imagens(imagensDoEnunciado(converterImagensParaDTO(q.getImagens())))
                 .build())
             .collect(Collectors.toList());
     }
@@ -124,16 +116,8 @@ public class QuestaoOtimizadoService {
             .cabecalho(q.getCabecalho())
             .enunciado(q.getEnunciado())
             .gabarito(q.getGabarito())
-            .alternativas(
-                alternativas.stream()
-                    .map(a -> QuestaoComAlternativasDTO.AlternativaDTO.builder()
-                        .id(a.getId())
-                        .ordem(a.getOrdem())
-                        .texto(a.getTexto())
-                        .build())
-                    .collect(Collectors.toList())
-            )
-            .imagens(converterImagensParaDTO(q.getImagens()))
+            .alternativas(montarAlternativas(alternativas, converterImagensParaDTO(q.getImagens())))
+            .imagens(imagensDoEnunciado(converterImagensParaDTO(q.getImagens())))
             .build());
     }
 
@@ -170,6 +154,31 @@ public class QuestaoOtimizadoService {
     }
 
     /**
+     * Alternativas da questão; a que é uma figura (ex.: um dos cinco gráficos) leva a própria imagem,
+     * casada pela ordem (0 = A) com {@code QuestaoImagem.alternativaIndice}.
+     */
+    private List<QuestaoComAlternativasDTO.AlternativaDTO> montarAlternativas(List<QuestaoAlternativa> alternativas,
+                                                                             List<QuestaoComAlternativasDTO.ImagemDTO> imagens) {
+        Map<Integer, QuestaoComAlternativasDTO.ImagemDTO> porAlternativa = new HashMap<>();
+        for (QuestaoComAlternativasDTO.ImagemDTO img : imagens) {
+            if (img.getAlternativaIndice() != null) porAlternativa.putIfAbsent(img.getAlternativaIndice(), img);
+        }
+        return alternativas.stream()
+            .map(a -> QuestaoComAlternativasDTO.AlternativaDTO.builder()
+                .id(a.getId())
+                .ordem(a.getOrdem())
+                .texto(a.getTexto())
+                .imagem(a.getOrdem() == null ? null : porAlternativa.get(a.getOrdem()))
+                .build())
+            .collect(Collectors.toList());
+    }
+
+    /** Imagens que aparecem com o enunciado: as que são alternativas vão dentro da alternativa, não aqui. */
+    private List<QuestaoComAlternativasDTO.ImagemDTO> imagensDoEnunciado(List<QuestaoComAlternativasDTO.ImagemDTO> imagens) {
+        return imagens.stream().filter(i -> i.getAlternativaIndice() == null).collect(Collectors.toList());
+    }
+
+    /**
      * Converte lista de QuestaoImagem para ImagemDTO
      * Gera URL pública dinamicamente baseado no nome do arquivo
      */
@@ -184,6 +193,7 @@ public class QuestaoOtimizadoService {
                 .textoOcr(img.getTextoOcr())
                 .exibirNoEnunciado(img.getExibirNoEnunciado() != null ? img.getExibirNoEnunciado() : true)
                 .exibirNasAlternativas(img.getExibirNasAlternativas() != null ? img.getExibirNasAlternativas() : false)
+                .alternativaIndice(img.getAlternativaIndice())
                 .build())
             .collect(Collectors.toList());
     }
